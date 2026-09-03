@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/FileBrowser.Api/FileBrowser.Api.csproj" />
+    <Project Path="src/FileBrowser.Application/FileBrowser.Application.csproj" />
+    <Project Path="src/FileBrowser.Infrastructure/FileBrowser.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/FileBrowser.Test/FileBrowser.Test.csproj" />
+  </Folder>
+</Solution>
