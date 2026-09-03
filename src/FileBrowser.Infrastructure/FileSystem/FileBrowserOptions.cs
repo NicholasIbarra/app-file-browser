@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace FileBrowser.Infrastructure.FileSystem;
+﻿namespace FileBrowser.Infrastructure.FileSystem;
 
 public sealed class FileBrowserOptions
 {
     public const string SectionName = "FileBrowser";
 
-    public required string HomeDirectory { get; init; }
+    public FileSystemProvider Provider { get; set; } = FileSystemProvider.Local;
+
+    public string HomeDirectory { get; set; } = "./local-storage";
+
+    public bool CreateIfMissing { get; set; } = true;
 }
