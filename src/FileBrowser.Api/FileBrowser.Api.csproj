@@ -4,4 +4,9 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\FileBrowser.Application\FileBrowser.Application.csproj" />
+    <ProjectReference Include="..\FileBrowser.Infrastructure\FileBrowser.Infrastructure.csproj" />
+  </ItemGroup>
+
 </Project>
