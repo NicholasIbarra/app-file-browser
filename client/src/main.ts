@@ -1,60 +1,108 @@
 import './style.css'
-import heroImg from './assets/hero.png'
-import typescriptLogo from './assets/typescript.svg'
-import viteLogo from './assets/vite.svg'
-import { setupCounter } from './counter.ts'
+import { getDirectory, type DirectoryContents } from './api'
 
-document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
-<section id="center">
-  <div class="hero">
-    <img src="${heroImg}" class="base" width="170" height="179">
-    <img src="${typescriptLogo}" class="framework" alt="TypeScript logo"/>
-    <img src="${viteLogo}" class="vite" alt="Vite logo" />
-  </div>
-  <div>
-    <h1>Get started</h1>
-    <p>Edit <code>src/main.ts</code> and save to test <code>HMR</code></p>
-  </div>
-  <button id="counter" type="button" class="counter"></button>
-</section>
+const app = document.querySelector<HTMLDivElement>('#app')!
+const history: Array<string | undefined> = []
+const savedTheme = localStorage.getItem('theme')
+const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+const initialTheme = savedTheme ?? (prefersDark ? 'dark' : 'light')
 
-<div class="ticks"></div>
+document.documentElement.dataset.theme = initialTheme
 
-<section id="next-steps">
-  <div id="docs">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#documentation-icon"></use></svg>
-    <h2>Documentation</h2>
-    <p>Your questions, answered</p>
-    <ul>
-      <li>
-        <a href="https://vite.dev/" target="_blank">
-          <img class="logo" src="${viteLogo}" alt="" />
-          Explore Vite
-        </a>
-      </li>
-      <li>
-        <a href="https://www.typescriptlang.org" target="_blank">
-          <img class="button-icon" src="${typescriptLogo}" alt="">
-          Learn more
-        </a>
-      </li>
-    </ul>
-  </div>
-  <div id="social">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#social-icon"></use></svg>
-    <h2>Connect with us</h2>
-    <p>Join the Vite community</p>
-    <ul>
-      <li><a href="https://github.com/vitejs/vite" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#github-icon"></use></svg>GitHub</a></li>
-      <li><a href="https://chat.vite.dev/" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#discord-icon"></use></svg>Discord</a></li>
-      <li><a href="https://x.com/vite_js" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#x-icon"></use></svg>X.com</a></li>
-      <li><a href="https://bsky.app/profile/vite.dev" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#bluesky-icon"></use></svg>Bluesky</a></li>
-    </ul>
-  </div>
-</section>
-
-<div class="ticks"></div>
-<section id="spacer"></section>
+app.innerHTML = `
+  <main class="explorer">
+    <header>
+      <h1>File Explorer</h1>
+      <button id="theme-toggle" type="button"></button>
+    </header>
+    <p id="current-path" aria-live="polite"></p>
+    <p id="status" role="status">Loading…</p>
+    <ul id="entries" aria-label="Directory contents"></ul>
+  </main>
 `
 
-setupCounter(document.querySelector<HTMLButtonElement>('#counter')!)
+const pathElement = document.querySelector<HTMLParagraphElement>('#current-path')!
+const statusElement = document.querySelector<HTMLParagraphElement>('#status')!
+const entriesElement = document.querySelector<HTMLUListElement>('#entries')!
+const themeToggle = document.querySelector<HTMLButtonElement>('#theme-toggle')!
+
+function updateThemeToggle() {
+  const isDark = document.documentElement.dataset.theme === 'dark'
+  themeToggle.textContent = isDark ? 'Light mode' : 'Dark mode'
+  themeToggle.setAttribute('aria-pressed', String(isDark))
+}
+
+themeToggle.addEventListener('click', () => {
+  const nextTheme =
+    document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'
+  document.documentElement.dataset.theme = nextTheme
+  localStorage.setItem('theme', nextTheme)
+  updateThemeToggle()
+})
+
+updateThemeToggle()
+
+function render(contents: DirectoryContents) {
+  pathElement.textContent = contents.path || 'Root'
+  statusElement.hidden = true
+  entriesElement.replaceChildren()
+
+  if (history.length > 0) {
+    const parentItem = document.createElement('li')
+    const parentButton = document.createElement('button')
+    parentButton.type = 'button'
+    parentButton.textContent = '..'
+    parentButton.addEventListener('click', () => {
+      const parentPath = history.pop()
+      void loadDirectory(parentPath, false)
+    })
+    parentItem.append(parentButton)
+    entriesElement.append(parentItem)
+  }
+
+  for (const entry of contents.entries ?? []) {
+    const item = document.createElement('li')
+
+    if (entry.type === 'Directory' && entry.path) {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.textContent = `${entry.name ?? entry.path}/`
+      button.addEventListener('click', () => {
+        void loadDirectory(entry.path!, true)
+      })
+      item.append(button)
+    } else {
+      const fileName = document.createElement('span')
+      fileName.textContent = entry.name ?? entry.path ?? '(unnamed file)'
+      item.append(fileName)
+    }
+
+    entriesElement.append(item)
+  }
+
+  if ((contents.entries?.length ?? 0) === 0) {
+    const emptyItem = document.createElement('li')
+    emptyItem.className = 'empty'
+    emptyItem.textContent = 'This folder is empty.'
+    entriesElement.append(emptyItem)
+  }
+}
+
+async function loadDirectory(path?: string, rememberCurrent = false) {
+  statusElement.hidden = false
+  statusElement.textContent = 'Loading…'
+  entriesElement.hidden = true
+
+  try {
+    const contents = await getDirectory(path)
+    if (rememberCurrent) history.push(pathElement.dataset.path || undefined)
+    pathElement.dataset.path = contents.path ?? ''
+    render(contents)
+    entriesElement.hidden = false
+  } catch (error) {
+    statusElement.textContent = 'Unable to load this directory.'
+    console.error(error)
+  }
+}
+
+void loadDirectory()
