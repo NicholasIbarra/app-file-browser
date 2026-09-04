@@ -22,8 +22,7 @@ public class LocalFileSystem : IFileSystem
 
         if (!Directory.Exists(physicalPath))
         {
-            throw new DirectoryNotFoundException(
-                $"Directory '{path}' was not found.");
+            return Task.FromResult(new DirectoryContents(path, []));
         }
 
         var directory = new DirectoryInfo(physicalPath);

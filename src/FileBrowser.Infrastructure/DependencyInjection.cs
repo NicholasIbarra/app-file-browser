@@ -3,7 +3,6 @@ using FileBrowser.Application.Browsing;
 using FileBrowser.Infrastructure.FileSystem;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 
 namespace FileBrowser.Infrastructure;
 

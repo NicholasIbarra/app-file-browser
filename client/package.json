@@ -1,0 +1,20 @@
+{
+  "name": "file-explorer-client",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "generate:api-types": "node scripts/generate-api-types.mjs",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.13.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.2"
+  },
+  "dependencies": {
+    "axios": "^1.20.0"
+  }
+}
