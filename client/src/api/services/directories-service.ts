@@ -1,5 +1,5 @@
-import { httpClient } from './http-client.ts'
-import type { paths } from './generated/schema.ts'
+import { httpClient } from './../http-client.ts'
+import type { paths } from './../generated/schema.ts'
 
 type GetDirectoryOperation = paths['/api/directories']['get']
 type GetDirectoryQuery = NonNullable<
