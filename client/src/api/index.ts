@@ -1,3 +1,5 @@
 export { getDirectory } from './directories-service.ts'
 export type { DirectoryContents } from './directories-service.ts'
+export { searchFiles } from './search-service.ts'
+export type { SearchResult } from './search-service.ts'
 export { httpClient } from './http-client.ts'
