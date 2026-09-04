@@ -1,5 +1,6 @@
 ﻿using FileBrowser.Application.Abtractstions.Indexing;
 using FileBrowser.Application.Browsing;
+using FileBrowser.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FileBrowser.Api.Controllers;
@@ -36,6 +37,62 @@ public class DirectoriesController : ControllerBase
         CancellationToken cancellationToken)
     {
         await _fileSearchIndex.RebuildAsync(cancellationToken);
+
+        return NoContent();
+    }
+
+    [HttpPost("upload")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadAsync(
+        [FromQuery] string path,
+        [FromQuery] bool overwrite,
+        [FromForm] IFormFile file,
+        CancellationToken cancellationToken)
+    {
+        await using var content = file.OpenReadStream();
+        await _directoryBrowserService.UploadAsync(
+            path,
+            content,
+            overwrite,
+            cancellationToken);
+
+        return StatusCode(StatusCodes.Status201Created);
+    }
+
+    [HttpDelete]
+    public async Task<IActionResult> DeleteAsync(
+        [FromQuery] string path,
+        [FromQuery] bool recursive,
+        CancellationToken cancellationToken)
+    {
+        await _directoryBrowserService.DeleteAsync(path, recursive, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("move")]
+    public async Task<IActionResult> MoveAsync(
+        [FromBody] FileOperationRequest request,
+        CancellationToken cancellationToken)
+    {
+        await _directoryBrowserService.MoveAsync(
+            request.SourcePath,
+            request.DestinationPath,
+            request.Overwrite,
+            cancellationToken);
+
+        return NoContent();
+    }
+
+    [HttpPost("copy")]
+    public async Task<IActionResult> CopyAsync(
+        [FromBody] FileOperationRequest request,
+        CancellationToken cancellationToken)
+    {
+        await _directoryBrowserService.CopyAsync(
+            request.SourcePath,
+            request.DestinationPath,
+            request.Overwrite,
+            cancellationToken);
 
         return NoContent();
     }

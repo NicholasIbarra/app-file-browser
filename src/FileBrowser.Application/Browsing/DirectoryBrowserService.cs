@@ -30,6 +30,48 @@ public class DirectoryBrowserService : IDirectoryBrowserService
         return new DirectoryContentsDto(contents.Path, entries);
     }
 
+    public Task UploadAsync(
+        string path,
+        Stream content,
+        bool overwrite = false,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        ArgumentNullException.ThrowIfNull(content);
+        return _fileSystem.UploadAsync(path, content, overwrite, cancellationToken);
+    }
+
+    public Task DeleteAsync(
+        string path,
+        bool recursive = false,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        return _fileSystem.DeleteAsync(path, recursive, cancellationToken);
+    }
+
+    public Task MoveAsync(
+        string sourcePath,
+        string destinationPath,
+        bool overwrite = false,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
+        return _fileSystem.MoveAsync(sourcePath, destinationPath, overwrite, cancellationToken);
+    }
+
+    public Task CopyAsync(
+        string sourcePath,
+        string destinationPath,
+        bool overwrite = false,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
+        return _fileSystem.CopyAsync(sourcePath, destinationPath, overwrite, cancellationToken);
+    }
+
     /// <summary>
     /// Handle the null path meant to be the root of the folder
     /// </summary>

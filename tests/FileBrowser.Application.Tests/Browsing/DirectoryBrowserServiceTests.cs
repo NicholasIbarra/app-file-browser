@@ -151,4 +151,45 @@ public sealed class DirectoryBrowserServiceTests
 
         Assert.Empty(result.Entries);
     }
+
+    [Fact]
+    public async Task UploadAsync_ForwardsRequestToFileSystem()
+    {
+        await using var content = new MemoryStream("content"u8.ToArray());
+        using var cts = new CancellationTokenSource();
+
+        await _sut.UploadAsync("/notes.txt", content, overwrite: true, cts.Token);
+
+        await _fileSystem.Received(1).UploadAsync("/notes.txt", content, true, cts.Token);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ForwardsRequestToFileSystem()
+    {
+        using var cts = new CancellationTokenSource();
+
+        await _sut.DeleteAsync("/Documents", recursive: true, cts.Token);
+
+        await _fileSystem.Received(1).DeleteAsync("/Documents", true, cts.Token);
+    }
+
+    [Fact]
+    public async Task MoveAsync_ForwardsRequestToFileSystem()
+    {
+        using var cts = new CancellationTokenSource();
+
+        await _sut.MoveAsync("/source", "/destination", overwrite: true, cts.Token);
+
+        await _fileSystem.Received(1).MoveAsync("/source", "/destination", true, cts.Token);
+    }
+
+    [Fact]
+    public async Task CopyAsync_ForwardsRequestToFileSystem()
+    {
+        using var cts = new CancellationTokenSource();
+
+        await _sut.CopyAsync("/source", "/destination", overwrite: true, cts.Token);
+
+        await _fileSystem.Received(1).CopyAsync("/source", "/destination", true, cts.Token);
+    }
 }
