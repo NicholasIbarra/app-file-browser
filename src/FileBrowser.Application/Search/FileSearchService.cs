@@ -46,7 +46,7 @@ public class FileSearchService : IFileSearchService
             })
             .Where(x => x.Match is not null)
             .OrderByDescending(x => x.Match!.Score)
-            .ThenBy(x => x.Entry.Name.Length)
+                 .ThenBy(x => x.Entry.Name.Length)
             .Take(limit)
             .Select(x => Map(x.Entry))
             .ToArray();

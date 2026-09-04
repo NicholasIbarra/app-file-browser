@@ -47,6 +47,13 @@ public class LocalFileSystem : IFileSystem
         return Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Gets all file and directory entries in the specified path.
+    /// </summary>
+    /// <param name="path">The path of the directory.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the file and directory entries.</returns>
+
     public Task<IReadOnlyList<FileItem>> GetAllDirectoryContentsAsync(
         string? path,
         CancellationToken cancellationToken = default)
