@@ -6,6 +6,10 @@ public interface IFileSystem
         string path,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<FileItem>> GetAllDirectoryContentsAsync(
+        string? path,
+        CancellationToken cancellationToken = default);
+
     Task<FileItem?> GetFileAsync(
         string path,
         CancellationToken cancellationToken = default);

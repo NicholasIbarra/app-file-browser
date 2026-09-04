@@ -1,6 +1,8 @@
+using FileBrowser.Application.Abtractstions.FileSystem;
 using FileBrowser.Infrastructure.FileSystem;
 using FileBrowser.Infrastructure.Indexing;
 using Microsoft.Extensions.Options;
+using NSubstitute;
 
 namespace FileBrowser.Infrastructure.Tests.Indexing;
 
@@ -43,25 +45,57 @@ public sealed class FileSearchIndexTests : IDisposable
     }
 
     [Fact]
-    public void GetFullPath_RelativePath_ResolvesWithinIndexRoot()
+    public async Task RebuildAsync_IndexesEntriesReturnedByFileSystemProvider()
     {
-        using var sut = CreateIndex();
+        var fileSystem = Substitute.For<IFileSystem>();
+        fileSystem
+            .GetAllDirectoryContentsAsync("/", Arg.Any<CancellationToken>())
+            .Returns([
+                new FileItem(
+                    "report.pdf",
+                    "/Documents/report.pdf",
+                    FileSystemEntryType.File,
+                    42,
+                    DateTimeOffset.UtcNow)
+            ]);
+        using var sut = new FileSearchIndex(fileSystem);
 
-        var result = sut.GetFullPath("Documents/report.pdf");
+        await sut.RebuildAsync(CancellationToken.None);
 
-        Assert.Equal(
-            Path.GetFullPath(Path.Combine(_rootPath, "Documents", "report.pdf")),
-            result);
+        var entry = Assert.Single(sut.Snapshot);
+        Assert.Equal("Documents/report.pdf", entry.RelativePath);
+        Assert.Equal("/Documents/report.pdf", entry.FullPath);
+        await fileSystem.Received(1)
+            .GetAllDirectoryContentsAsync("/", Arg.Any<CancellationToken>());
     }
 
-    [Theory]
-    [InlineData("../outside.txt")]
-    [InlineData("Documents/../../outside.txt")]
-    public void GetFullPath_PathOutsideIndexRoot_ThrowsUnauthorizedAccessException(string path)
+    [Fact]
+    public async Task AddOrUpdateAsync_ProviderDirectory_IndexesEntryAndDescendants()
     {
-        using var sut = CreateIndex();
+        var fileSystem = Substitute.For<IFileSystem>();
+        var modified = DateTimeOffset.UtcNow;
+        fileSystem
+            .GetFileAsync("/Documents", Arg.Any<CancellationToken>())
+            .Returns(new FileItem(
+                "Documents", "/Documents", FileSystemEntryType.Directory, null, modified));
+        fileSystem
+            .GetAllDirectoryContentsAsync("/Documents", Arg.Any<CancellationToken>())
+            .Returns([
+                new FileItem(
+                    "report.pdf",
+                    "/Documents/report.pdf",
+                    FileSystemEntryType.File,
+                    42,
+                    modified)
+            ]);
+        using var sut = new FileSearchIndex(fileSystem);
 
-        Assert.Throws<UnauthorizedAccessException>(() => sut.GetFullPath(path));
+        await sut.AddOrUpdateAsync("/Documents", CancellationToken.None);
+
+        Assert.Collection(
+            sut.Snapshot,
+            entry => Assert.Equal("Documents", entry.RelativePath),
+            entry => Assert.Equal("Documents/report.pdf", entry.RelativePath));
     }
 
     [Fact]
@@ -76,7 +110,7 @@ public sealed class FileSearchIndexTests : IDisposable
 
         var entry = Assert.Single(sut.Snapshot);
         Assert.Equal("uploaded.txt", entry.Name);
-        Assert.Equal(filePath, entry.FullPath);
+        Assert.Equal("uploaded.txt", entry.RelativePath);
         Assert.False(entry.IsDirectory);
         Assert.Equal(".txt", entry.Extension);
     }
@@ -165,10 +199,13 @@ public sealed class FileSearchIndexTests : IDisposable
 
     private FileSearchIndex CreateIndex()
     {
-        return new FileSearchIndex(Options.Create(new FileBrowserOptions
+        var options = Options.Create(new FileBrowserOptions
         {
             HomeDirectory = _rootPath
-        }));
+        });
+        var fileSystem = new LocalFileSystem(new FileSystemPathResolver(options));
+
+        return new FileSearchIndex(fileSystem);
     }
 
     public void Dispose()

@@ -47,6 +47,37 @@ public class LocalFileSystem : IFileSystem
         return Task.FromResult(result);
     }
 
+    public Task<IReadOnlyList<FileItem>> GetAllDirectoryContentsAsync(
+        string? path,
+        CancellationToken cancellationToken = default)
+    {
+        var results = new List<FileItem>();
+
+        var root = new DirectoryInfo(_pathResolver.Resolve(path));
+
+        if (!root.Exists)
+        {
+            return Task.FromResult<IReadOnlyList<FileItem>>(Array.Empty<FileItem>());
+        }
+
+        var options = new EnumerationOptions
+        {
+            RecurseSubdirectories = true,
+            IgnoreInaccessible = true,
+            ReturnSpecialDirectories = false,
+            AttributesToSkip = FileAttributes.ReparsePoint // Avoid following directory junctions / symlinks
+        };
+
+        foreach (var entry in root.EnumerateFileSystemInfos("*", options))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            results.Add(Map(entry));
+        }
+
+        return Task.FromResult<IReadOnlyList<FileItem>>(results);
+    }
+
     /// <summary>
     /// Gets a file or directory entry by its path.
     /// </summary>
@@ -331,5 +362,4 @@ public class LocalFileSystem : IFileSystem
                 $"Unsupported filesystem entry '{entry.GetType().Name}'.")
         };
     }
-
 }
