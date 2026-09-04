@@ -75,6 +75,13 @@ h1 {
   opacity: 0.65;
 }
 
+#theme-toggle {
+  width: 38px;
+  height: 34px;
+  padding: 0;
+  line-height: 1;
+}
+
 #search-button {
   display: flex;
   align-items: center;

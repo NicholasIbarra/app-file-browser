@@ -25,7 +25,9 @@ describe('initializeThemeToggle', () => {
     initializeThemeToggle(button)
 
     expect(document.documentElement.dataset.theme).toBe('dark')
-    expect(button.textContent).toBe('Light mode')
+    expect(button.textContent).toBe('☀️')
+    expect(button.getAttribute('aria-label')).toBe('Light mode')
+    expect(button.title).toBe('Light mode')
     expect(button.getAttribute('aria-pressed')).toBe('true')
   })
 
@@ -37,7 +39,8 @@ describe('initializeThemeToggle', () => {
     initializeThemeToggle(button)
 
     expect(document.documentElement.dataset.theme).toBe('light')
-    expect(button.textContent).toBe('Dark mode')
+    expect(button.textContent).toBe('🌙')
+    expect(button.getAttribute('aria-label')).toBe('Dark mode')
   })
 
   it('toggles and persists the selected theme', () => {
@@ -48,7 +51,8 @@ describe('initializeThemeToggle', () => {
 
     expect(document.documentElement.dataset.theme).toBe('dark')
     expect(localStorage.getItem('theme')).toBe('dark')
-    expect(button.textContent).toBe('Light mode')
+    expect(button.textContent).toBe('☀️')
+    expect(button.getAttribute('aria-label')).toBe('Light mode')
     expect(button.getAttribute('aria-pressed')).toBe('true')
   })
 })

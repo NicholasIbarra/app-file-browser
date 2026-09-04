@@ -16,7 +16,10 @@ export function initializeThemeToggle(button: HTMLButtonElement) {
   function applyTheme(theme: Theme) {
     const isDark = theme === 'dark'
     document.documentElement.dataset.theme = theme
-    button.textContent = isDark ? 'Light mode' : 'Dark mode'
+    const nextThemeLabel = isDark ? 'Light mode' : 'Dark mode'
+    button.textContent = isDark ? '☀️' : '🌙'
+    button.setAttribute('aria-label', nextThemeLabel)
+    button.title = nextThemeLabel
     button.setAttribute('aria-pressed', String(isDark))
   }
 
