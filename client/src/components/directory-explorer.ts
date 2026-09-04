@@ -1,6 +1,7 @@
 import {
   copyEntry,
   deleteEntry,
+  downloadFile,
   getDirectory,
   moveEntry,
   reIndexDirectories,
@@ -92,6 +93,30 @@ export class DirectoryExplorer {
       'Unable to delete this item.',
       () => deleteEntry(path, isDirectory),
     )
+  }
+
+  private async download(path: string, fileName: string) {
+    this.setActionsDisabled(true)
+    this.showStatus(`Downloading ${fileName}…`)
+
+    try {
+      const content = await downloadFile(path)
+      const url = URL.createObjectURL(content)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = fileName
+      link.hidden = true
+      document.body.append(link)
+      link.click()
+      link.remove()
+      window.setTimeout(() => URL.revokeObjectURL(url), 0)
+      this.elements.status.hidden = true
+    } catch (error) {
+      this.showStatus('Unable to download this file.')
+      console.error(error)
+    } finally {
+      this.setActionsDisabled(false)
+    }
   }
 
   private async runOperation(
@@ -204,6 +229,14 @@ export class DirectoryExplorer {
       if (entry.path) {
         const actions = document.createElement('span')
         actions.className = 'entry-actions'
+        if (entry.type !== 'Directory') {
+          actions.append(
+            this.createAction(
+              'Download',
+              () => this.download(entry.path!, entry.name ?? 'download'),
+            ),
+          )
+        }
         actions.append(
           this.createAction('Move', () => this.move(entry.path!)),
           this.createAction('Copy', () => this.copy(entry.path!)),

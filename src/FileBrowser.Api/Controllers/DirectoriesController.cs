@@ -32,6 +32,23 @@ public class DirectoriesController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("download")]
+    [Produces("application/octet-stream")]
+    public async Task<IActionResult> DownloadAsync(
+        [FromQuery] string path,
+        CancellationToken cancellationToken)
+    {
+        var download = await _directoryBrowserService.DownloadAsync(
+            path,
+            cancellationToken);
+
+        return File(
+            download.Content,
+            "application/octet-stream",
+            download.FileName,
+            enableRangeProcessing: true);
+    }
+
     [HttpPost("re-index")]
     public async Task<IActionResult> ReIndexAsync(
         CancellationToken cancellationToken)

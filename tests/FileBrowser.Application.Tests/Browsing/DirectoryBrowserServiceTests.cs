@@ -157,6 +157,85 @@ public sealed class DirectoryBrowserServiceTests
     }
 
     [Fact]
+    public async Task DownloadAsync_ExistingFile_ReturnsFileNameAndContentStream()
+    {
+        var file = new FileItem(
+            "report.pdf",
+            "/Documents/report.pdf",
+            FileSystemEntryType.File,
+            1024,
+            DateTimeOffset.UtcNow);
+        var content = new MemoryStream("report"u8.ToArray());
+        _fileSystem
+            .GetFileAsync("/Documents/report.pdf", Arg.Any<CancellationToken>())
+            .Returns(file);
+        _fileSystem
+            .OpenReadAsync("/Documents/report.pdf", Arg.Any<CancellationToken>())
+            .Returns(content);
+
+        var result = await _sut.DownloadAsync("/Documents/report.pdf");
+
+        Assert.Equal("report.pdf", result.FileName);
+        Assert.Same(content, result.Content);
+    }
+
+    [Fact]
+    public async Task DownloadAsync_PassesCancellationTokenToFileSystem()
+    {
+        using var cts = new CancellationTokenSource();
+        var file = new FileItem(
+            "notes.txt",
+            "/notes.txt",
+            FileSystemEntryType.File,
+            5,
+            DateTimeOffset.UtcNow);
+        var content = new MemoryStream("notes"u8.ToArray());
+        _fileSystem.GetFileAsync("/notes.txt", cts.Token).Returns(file);
+        _fileSystem.OpenReadAsync("/notes.txt", cts.Token).Returns(content);
+
+        await _sut.DownloadAsync("/notes.txt", cts.Token);
+
+        await _fileSystem.Received(1).GetFileAsync("/notes.txt", cts.Token);
+        await _fileSystem.Received(1).OpenReadAsync("/notes.txt", cts.Token);
+    }
+
+    [Fact]
+    public async Task DownloadAsync_MissingFile_ThrowsAndDoesNotOpenStream()
+    {
+        _fileSystem
+            .GetFileAsync("/missing.txt", Arg.Any<CancellationToken>())
+            .Returns((FileItem?)null);
+
+        await Assert.ThrowsAsync<FileNotFoundException>(
+            () => _sut.DownloadAsync("/missing.txt"));
+
+        await _fileSystem.DidNotReceive().OpenReadAsync(
+            Arg.Any<string>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DownloadAsync_Directory_ThrowsAndDoesNotOpenStream()
+    {
+        var directory = new FileItem(
+            "Documents",
+            "/Documents",
+            FileSystemEntryType.Directory,
+            null,
+            DateTimeOffset.UtcNow);
+        _fileSystem
+            .GetFileAsync("/Documents", Arg.Any<CancellationToken>())
+            .Returns(directory);
+
+        await Assert.ThrowsAsync<FileNotFoundException>(
+            () => _sut.DownloadAsync("/Documents"));
+
+        await _fileSystem.DidNotReceive().OpenReadAsync(
+            Arg.Any<string>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task UploadAsync_ForwardsRequestToFileSystem()
     {
         await using var content = new MemoryStream("content"u8.ToArray());

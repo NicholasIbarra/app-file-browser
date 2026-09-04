@@ -34,6 +34,24 @@ public class DirectoryBrowserService : IDirectoryBrowserService
         return new DirectoryContentsDto(contents.Path, entries);
     }
 
+    public async Task<FileDownloadDto> DownloadAsync(
+        string path,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        var file = await _fileSystem.GetFileAsync(path, cancellationToken);
+
+        if (file is null || file.Type != FileSystemEntryType.File)
+        {
+            throw new FileNotFoundException($"File '{path}' was not found.", path);
+        }
+
+        var content = await _fileSystem.OpenReadAsync(path, cancellationToken);
+
+        return new FileDownloadDto(file.Name, content);
+    }
+
     public async Task UploadAsync(
         string path,
         Stream content,

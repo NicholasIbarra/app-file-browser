@@ -7,6 +7,10 @@ type GetDirectoryQuery = NonNullable<
 >
 type DirectoryContents =
   GetDirectoryOperation['responses'][200]['content']['application/json']
+type DownloadDirectoryOperation = paths['/api/directories/download']['get']
+type DownloadDirectoryQuery = NonNullable<
+  DownloadDirectoryOperation['parameters']['query']
+>
 type FileOperationRequest = components['schemas']['FileOperationRequest']
 
 export async function getDirectory(
@@ -21,6 +25,17 @@ export async function getDirectory(
 
 export async function reIndexDirectories(): Promise<void> {
   await httpClient.post('/api/directories/re-index')
+}
+
+export async function downloadFile(
+  path: NonNullable<DownloadDirectoryQuery['path']>,
+): Promise<Blob> {
+  const response = await httpClient.get<Blob>('/api/directories/download', {
+    params: { path },
+    responseType: 'blob',
+  })
+
+  return response.data
 }
 
 export async function uploadFile(

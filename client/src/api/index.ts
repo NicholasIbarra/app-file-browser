@@ -1,6 +1,7 @@
 export {
   copyEntry,
   deleteEntry,
+  downloadFile,
   getDirectory,
   moveEntry,
   reIndexDirectories,
