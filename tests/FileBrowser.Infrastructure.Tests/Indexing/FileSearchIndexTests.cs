@@ -10,6 +10,60 @@ public sealed class FileSearchIndexTests : IDisposable
         Path.GetTempPath(),
         $"file-browser-index-tests-{Guid.NewGuid():N}");
 
+    [Theory]
+    [InlineData("/Documents/report.pdf", "Documents/report.pdf")]
+    [InlineData("\\Documents\\report.pdf", "Documents/report.pdf")]
+    [InlineData("//Documents/report.pdf//", "Documents/report.pdf")]
+    [InlineData("report.pdf", "report.pdf")]
+    public void NormalizeRelativePath_NormalizesDirectorySeparatorsAndOuterSlashes(
+        string path,
+        string expected)
+    {
+        var result = FileSearchIndex.NormalizeRelativePath(path);
+
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("Documents", "Documents", true)]
+    [InlineData("documents", "Documents", true)]
+    [InlineData("Documents/report.pdf", "Documents", true)]
+    [InlineData("Documents\\Reports\\report.pdf", "Documents", true)]
+    [InlineData("Documents-Archive/report.pdf", "Documents", false)]
+    [InlineData("Document", "Documents", false)]
+    [InlineData("Other/report.pdf", "Documents", false)]
+    public void IsPathOrDescendant_ReturnsExpectedResult(
+        string candidatePath,
+        string parentPath,
+        bool expected)
+    {
+        var result = FileSearchIndex.IsPathOrDescendant(candidatePath, parentPath);
+
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void GetFullPath_RelativePath_ResolvesWithinIndexRoot()
+    {
+        using var sut = CreateIndex();
+
+        var result = sut.GetFullPath("Documents/report.pdf");
+
+        Assert.Equal(
+            Path.GetFullPath(Path.Combine(_rootPath, "Documents", "report.pdf")),
+            result);
+    }
+
+    [Theory]
+    [InlineData("../outside.txt")]
+    [InlineData("Documents/../../outside.txt")]
+    public void GetFullPath_PathOutsideIndexRoot_ThrowsUnauthorizedAccessException(string path)
+    {
+        using var sut = CreateIndex();
+
+        Assert.Throws<UnauthorizedAccessException>(() => sut.GetFullPath(path));
+    }
+
     [Fact]
     public async Task AddOrUpdateAsync_NewFile_AddsEntry()
     {
@@ -40,6 +94,37 @@ public sealed class FileSearchIndexTests : IDisposable
         await sut.AddOrUpdateAsync("/uploaded.txt", CancellationToken.None);
 
         Assert.Single(sut.Snapshot, entry => entry.Name == "uploaded.txt");
+    }
+
+    [Fact]
+    public async Task AddOrUpdateAsync_Directory_AddsDirectoryAndDescendants()
+    {
+        var directory = Directory.CreateDirectory(Path.Combine(_rootPath, "Copied"));
+        await File.WriteAllTextAsync(Path.Combine(directory.FullName, "copied.txt"), "copied");
+        using var sut = CreateIndex();
+
+        await sut.AddOrUpdateAsync("/Copied", CancellationToken.None);
+
+        Assert.Contains(sut.Snapshot, entry => entry.Name == "Copied" && entry.IsDirectory);
+        Assert.Contains(sut.Snapshot, entry => entry.Name == "copied.txt" && !entry.IsDirectory);
+    }
+
+    [Fact]
+    public async Task MoveAsync_Directory_RemovesSourceAndAddsDestinationSubtree()
+    {
+        var source = Directory.CreateDirectory(Path.Combine(_rootPath, "Source"));
+        await File.WriteAllTextAsync(Path.Combine(source.FullName, "moved.txt"), "moved");
+        using var sut = CreateIndex();
+        await sut.RebuildAsync(CancellationToken.None);
+        Directory.Move(source.FullName, Path.Combine(_rootPath, "Destination"));
+
+        await sut.MoveAsync("/Source", "/Destination", CancellationToken.None);
+
+        Assert.DoesNotContain(
+            sut.Snapshot,
+            entry => entry.RelativePath.Replace('\\', '/').StartsWith("Source"));
+        Assert.Contains(sut.Snapshot, entry => entry.Name == "Destination" && entry.IsDirectory);
+        Assert.Contains(sut.Snapshot, entry => entry.Name == "moved.txt" && !entry.IsDirectory);
     }
 
     [Fact]

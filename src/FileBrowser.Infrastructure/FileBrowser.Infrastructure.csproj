@@ -9,4 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\FileBrowser.Application\FileBrowser.Application.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="FileBrowser.Infrastructure.Tests" />
+  </ItemGroup>
 </Project>

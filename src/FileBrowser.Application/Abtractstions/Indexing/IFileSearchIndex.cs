@@ -8,5 +8,10 @@ public interface IFileSearchIndex
 
     Task AddOrUpdateAsync(string path, CancellationToken cancellationToken);
 
+    Task MoveAsync(
+        string sourcePath,
+        string destinationPath,
+        CancellationToken cancellationToken);
+
     Task RemoveAsync(string path, CancellationToken cancellationToken);
 }

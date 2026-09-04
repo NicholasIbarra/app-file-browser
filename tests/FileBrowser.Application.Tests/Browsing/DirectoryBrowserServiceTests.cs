@@ -247,6 +247,38 @@ public sealed class DirectoryBrowserServiceTests
     }
 
     [Fact]
+    public async Task MoveAsync_AfterMove_PublishesFileMovedEvent()
+    {
+        using var cts = new CancellationTokenSource();
+
+        await _sut.MoveAsync("/source", "/destination", cancellationToken: cts.Token);
+
+        await _publisher.Received(1).Publish(
+            Arg.Is<FileMovedEvent>(notification =>
+                notification.SourcePath == "/source"
+                && notification.DestinationPath == "/destination"),
+            cts.Token);
+    }
+
+    [Fact]
+    public async Task MoveAsync_WhenMoveFails_DoesNotPublishFileMovedEvent()
+    {
+        _fileSystem
+            .MoveAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<bool>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new IOException("Move failed.")));
+
+        await Assert.ThrowsAsync<IOException>(() => _sut.MoveAsync("/source", "/destination"));
+
+        await _publisher.DidNotReceive().Publish(
+            Arg.Any<FileMovedEvent>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task CopyAsync_ForwardsRequestToFileSystem()
     {
         using var cts = new CancellationTokenSource();
@@ -254,5 +286,36 @@ public sealed class DirectoryBrowserServiceTests
         await _sut.CopyAsync("/source", "/destination", overwrite: true, cts.Token);
 
         await _fileSystem.Received(1).CopyAsync("/source", "/destination", true, cts.Token);
+    }
+
+    [Fact]
+    public async Task CopyAsync_AfterCopy_PublishesFileCopiedEvent()
+    {
+        using var cts = new CancellationTokenSource();
+
+        await _sut.CopyAsync("/source", "/destination", cancellationToken: cts.Token);
+
+        await _publisher.Received(1).Publish(
+            Arg.Is<FileCopiedEvent>(notification =>
+                notification.DestinationPath == "/destination"),
+            cts.Token);
+    }
+
+    [Fact]
+    public async Task CopyAsync_WhenCopyFails_DoesNotPublishFileCopiedEvent()
+    {
+        _fileSystem
+            .CopyAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<bool>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new IOException("Copy failed.")));
+
+        await Assert.ThrowsAsync<IOException>(() => _sut.CopyAsync("/source", "/destination"));
+
+        await _publisher.DidNotReceive().Publish(
+            Arg.Any<FileCopiedEvent>(),
+            Arg.Any<CancellationToken>());
     }
 }

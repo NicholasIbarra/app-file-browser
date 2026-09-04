@@ -86,21 +86,46 @@ public class FileSearchIndex : IFileSearchIndex, IDisposable
         {
             var relativePath = NormalizeRelativePath(path);
             var fullPath = GetFullPath(relativePath);
-            var file = new FileInfo(fullPath);
+            var entry = GetExistingEntry(fullPath, path);
+            var indexedEntries = BuildEntries(entry, cancellationToken);
 
-            if (!file.Exists)
-            {
-                throw new FileNotFoundException(
-                    $"Cannot add '{path}' to the index because it does not exist.",
-                    path);
-            }
-
-            var newEntry = Map(file);
             var entries = Snapshot
-                .Where(entry => !NormalizeRelativePath(entry.RelativePath).Equals(
-                    relativePath,
-                    StringComparison.OrdinalIgnoreCase))
-                .Append(newEntry)
+                .Where(existing => !IsPathOrDescendant(existing.RelativePath, relativePath))
+                .Concat(indexedEntries)
+                .ToArray();
+
+            Volatile.Write(ref _snapshot, entries);
+        }
+        finally
+        {
+            _rebuildLock.Release();
+        }
+    }
+
+    public async Task MoveAsync(
+        string sourcePath,
+        string destinationPath,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
+
+        await _rebuildLock.WaitAsync(cancellationToken);
+
+        try
+        {
+            var source = NormalizeRelativePath(sourcePath);
+            var destination = NormalizeRelativePath(destinationPath);
+            var destinationEntry = GetExistingEntry(
+                GetFullPath(destination),
+                destinationPath);
+            var movedEntries = BuildEntries(destinationEntry, cancellationToken);
+
+            var entries = Snapshot
+                .Where(existing =>
+                    !IsPathOrDescendant(existing.RelativePath, source)
+                    && !IsPathOrDescendant(existing.RelativePath, destination))
+                .Concat(movedEntries)
                 .ToArray();
 
             Volatile.Write(ref _snapshot, entries);
@@ -140,14 +165,22 @@ public class FileSearchIndex : IFileSearchIndex, IDisposable
         return results;
     }
 
-    private static string NormalizeRelativePath(string path)
+    internal static string NormalizeRelativePath(string path)
     {
         return path
             .Replace('\\', '/')
             .Trim('/');
     }
 
-    private string GetFullPath(string relativePath)
+    internal static bool IsPathOrDescendant(string candidatePath, string parentPath)
+    {
+        var candidate = NormalizeRelativePath(candidatePath);
+
+        return candidate.Equals(parentPath, StringComparison.OrdinalIgnoreCase)
+            || candidate.StartsWith(parentPath + "/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    internal string GetFullPath(string relativePath)
     {
         var fullPath = Path.GetFullPath(Path.Combine(
             _rootPath,
@@ -175,6 +208,51 @@ public class FileSearchIndex : IFileSearchIndex, IDisposable
             FullPath: entry.FullName,
             IsDirectory: isDirectory,
             Extension: isDirectory ? null : Path.GetExtension(entry.Name));
+    }
+
+    internal static FileSystemInfo GetExistingEntry(string fullPath, string originalPath)
+    {
+        if (File.Exists(fullPath))
+        {
+            return new FileInfo(fullPath);
+        }
+
+        if (Directory.Exists(fullPath))
+        {
+            return new DirectoryInfo(fullPath);
+        }
+
+        throw new FileNotFoundException(
+            $"Cannot add '{originalPath}' to the index because it does not exist.",
+            originalPath);
+    }
+
+    private IReadOnlyList<FileIndexEntry> BuildEntries(
+        FileSystemInfo rootEntry,
+        CancellationToken cancellationToken)
+    {
+        var entries = new List<FileIndexEntry> { Map(rootEntry) };
+
+        if (rootEntry is not DirectoryInfo directory)
+        {
+            return entries;
+        }
+
+        var options = new EnumerationOptions
+        {
+            RecurseSubdirectories = true,
+            IgnoreInaccessible = true,
+            ReturnSpecialDirectories = false,
+            AttributesToSkip = FileAttributes.ReparsePoint
+        };
+
+        foreach (var entry in directory.EnumerateFileSystemInfos("*", options))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            entries.Add(Map(entry));
+        }
+
+        return entries;
     }
 
     public void Dispose()

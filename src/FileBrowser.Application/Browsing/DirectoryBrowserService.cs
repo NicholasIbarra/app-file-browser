@@ -58,7 +58,7 @@ public class DirectoryBrowserService : IDirectoryBrowserService
         await _publisher.Publish(new FileDeletedEvent(path), cancellationToken);
     }
 
-    public Task MoveAsync(
+    public async Task MoveAsync(
         string sourcePath,
         string destinationPath,
         bool overwrite = false,
@@ -66,10 +66,19 @@ public class DirectoryBrowserService : IDirectoryBrowserService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
-        return _fileSystem.MoveAsync(sourcePath, destinationPath, overwrite, cancellationToken);
+
+        await _fileSystem.MoveAsync(
+            sourcePath,
+            destinationPath,
+            overwrite,
+            cancellationToken);
+
+        await _publisher.Publish(
+            new FileMovedEvent(sourcePath, destinationPath),
+            cancellationToken);
     }
 
-    public Task CopyAsync(
+    public async Task CopyAsync(
         string sourcePath,
         string destinationPath,
         bool overwrite = false,
@@ -77,7 +86,14 @@ public class DirectoryBrowserService : IDirectoryBrowserService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
-        return _fileSystem.CopyAsync(sourcePath, destinationPath, overwrite, cancellationToken);
+
+        await _fileSystem.CopyAsync(
+            sourcePath,
+            destinationPath,
+            overwrite,
+            cancellationToken);
+
+        await _publisher.Publish(new FileCopiedEvent(destinationPath), cancellationToken);
     }
 
     /// <summary>
