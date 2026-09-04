@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "File Search Indexing Flow",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "legend": { "mode": "hidden" },
+    "repository": {
+      "url": "https://github.com/NicholasIbarra/app-file-browser",
+      "revision": "3419db8ee5170f61cc4d75461b5863ab295b1f16"
+    },
+    "viewBox": [1390, 820],
+    "views": [
+      {
+        "id": "startup-bootstrap",
+        "label": "Startup bootstrap",
+        "focus": ["aspnetHost", "hostedService", "fileSearchIndex", "configuredRoot", "searchService"],
+        "note": "Verified: the hosted service awaits a recursive System.IO rebuild, then atomically publishes the completed snapshot."
+      },
+      {
+        "id": "incremental-events",
+        "label": "Incremental events",
+        "focus": ["directoryBrowser", "mediatRHandlers", "fileSearchIndex", "proposedWatcher", "proposedQueue"],
+        "note": "Verified application mutations publish MediatR notifications; external watcher ingestion and normalization are Proposed."
+      },
+      {
+        "id": "rename-or-move",
+        "label": "Rename or move",
+        "focus": ["directoryBrowser", "mediatRHandlers", "fileSearchIndex", "proposedWatcher", "configuredRoot"],
+        "note": "Verified app move calls MoveAsync; Proposed watcher logic must normalize rename versus boundary delete/create."
+      },
+      {
+        "id": "failure-and-reconciliation",
+        "label": "Failure and reconciliation",
+        "focus": ["proposedWatcher", "proposedQueue", "proposedReconciler", "fileSearchIndex", "configuredRoot"],
+        "note": "Proposed: decouple callbacks, normalize duplicates/reordering, retry incomplete copies, and reconcile missed events."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "aspnetHost",
+      "type": "backend",
+      "label": "ASP.NET Core Host",
+      "sublabel": "WebApplication startup",
+      "pos": [35, 105],
+      "size": [175, 72],
+      "sources": [{ "path": "src/FileBrowser.Api/Program.cs", "line": 4 }, { "path": "src/FileBrowser.Infrastructure/DependencyInjection.cs", "line": 29 }]
+    },
+    {
+      "id": "hostedService",
+      "type": "backend",
+      "label": "FileIndexHostedService",
+      "sublabel": "BackgroundService",
+      "pos": [270, 105],
+      "size": [190, 72],
+      "sources": [{ "path": "src/FileBrowser.Infrastructure/BackgroundServices/FileIndexHostedService.cs", "line": 6, "end_line": 18 }]
+    },
+    {
+      "id": "fileSearchIndex",
+      "type": "database",
+      "label": "FileSearchIndex : IFileSearchIndex",
+      "sublabel": "recursive mapper + singleton snapshot",
+      "tag": "SemaphoreSlim + Volatile",
+      "pos": [545, 105],
+      "size": [250, 82],
+      "sources": [{ "path": "src/FileBrowser.Infrastructure/Indexing/FileSearchIndex.cs", "line": 7, "end_line": 164 }, { "path": "src/FileBrowser.Infrastructure/DependencyInjection.cs", "line": 27 }]
+    },
+    {
+      "id": "configuredRoot",
+      "type": "external",
+      "label": "Configured HomeDirectory",
+      "sublabel": "host file-system tree",
+      "pos": [570, 300],
+      "size": [205, 72],
+      "sources": [{ "path": "src/FileBrowser.Infrastructure/FileSystem/FileBrowserOptions.cs", "line": 7 }, { "path": "src/FileBrowser.Api/appsettings.Development.json", "line": 8 }]
+    },
+    {
+      "id": "searchService",
+      "type": "backend",
+      "label": "FileSearchService : IFileSearchService",
+      "sublabel": "reads current Snapshot",
+      "pos": [900, 105],
+      "size": [250, 72],
+      "sources": [{ "path": "src/FileBrowser.Application/Search/FileSearchService.cs", "line": 5, "end_line": 52 }, { "path": "src/FileBrowser.Application/Search/IFileSearchService.cs", "line": 7 }]
+    },
+    {
+      "id": "directoryBrowser",
+      "type": "backend",
+      "label": "DirectoryBrowserService + IFileSystem",
+      "sublabel": "verified app-originated mutations",
+      "pos": [35, 460],
+      "size": [250, 78],
+      "sources": [{ "path": "src/FileBrowser.Application/Browsing/DirectoryBrowserService.cs", "line": 7, "end_line": 115 }, { "path": "src/FileBrowser.Application/Abtractstions/FileSystem/IFileSystem.cs", "line": 3 }]
+    },
+    {
+      "id": "mediatRHandlers",
+      "type": "messagebus",
+      "label": "MediatR FileChange Handlers",
+      "sublabel": "Created / Copied / Moved / Deleted",
+      "pos": [350, 460],
+      "size": [235, 78],
+      "sources": [{ "path": "src/FileBrowser.Application/FileChanges/FileCreatedEventHandler.cs", "line": 6 }, { "path": "src/FileBrowser.Application/FileChanges/FileMovedEventHandler.cs", "line": 6 }, { "path": "src/FileBrowser.Application/FileChanges/FileDeletedEventHandler.cs", "line": 6 }]
+    },
+    {
+      "id": "proposedWatcher",
+      "type": "external",
+      "label": "Proposed: FileSystemWatcher",
+      "sublabel": "external mutation event source",
+      "tag": "not implemented",
+      "pos": [850, 300],
+      "size": [215, 78]
+    },
+    {
+      "id": "proposedQueue",
+      "type": "messagebus",
+      "label": "Proposed: Async Event Adapter",
+      "sublabel": "queue + normalize + debounce + retry",
+      "tag": "not implemented",
+      "pos": [1135, 300],
+      "size": [235, 82]
+    },
+    {
+      "id": "proposedReconciler",
+      "type": "backend",
+      "label": "Proposed: Reconciliation",
+      "sublabel": "rescan after overflow or uncertainty",
+      "tag": "not implemented",
+      "pos": [1135, 505],
+      "size": [230, 82]
+    }
+  ],
+  "connections": [
+    { "id": "hostStartsWorker", "from": "aspnetHost", "to": "hostedService", "label": "hosted-service start", "variant": "emphasis", "width": 2, "labelAt": [240, 195] },
+    { "id": "workerRebuild", "from": "hostedService", "to": "fileSearchIndex", "label": "direct call: RebuildAsync", "variant": "emphasis", "width": 2, "labelAt": [503, 75] },
+    { "id": "indexScansRoot", "from": "fileSearchIndex", "to": "configuredRoot", "label": "direct System.IO recursive scan", "variant": "emphasis", "width": 2, "fromSide": "bottom", "toSide": "top", "labelAt": [785, 245] },
+    { "id": "searchReadsSnapshot", "from": "fileSearchIndex", "to": "searchService", "label": "Snapshot read", "variant": "emphasis", "width": 2, "labelAt": [848, 205] },
+    { "id": "appPublishes", "from": "directoryBrowser", "to": "mediatRHandlers", "label": "direct publish after I/O", "variant": "default", "labelAt": [317, 565] },
+    { "id": "handlersMutate", "from": "mediatRHandlers", "to": "fileSearchIndex", "label": "index mutation", "variant": "default", "fromSide": "top", "toSide": "bottom", "via": [[467.5, 430], [520, 430], [520, 230], [670, 230]], "labelAt": [580, 215] },
+    { "id": "rootEvents", "from": "configuredRoot", "to": "proposedWatcher", "label": "file-system event", "variant": "dashed", "labelAt": [812, 405] },
+    { "id": "watcherQueues", "from": "proposedWatcher", "to": "proposedQueue", "label": "queued command", "variant": "dashed", "labelAt": [1080, 405] },
+    { "id": "queueMutates", "from": "proposedQueue", "to": "fileSearchIndex", "label": "normalized index mutation", "variant": "dashed", "fromSide": "top", "toSide": "top", "via": [[1252.5, 245], [1252.5, 45], [670, 45]], "labelAt": [950, 35] },
+    { "id": "queueReconciles", "from": "proposedQueue", "to": "proposedReconciler", "label": "uncertain / overflow", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "labelAt": [1253, 465] },
+    { "id": "rebuildAfterFailure", "from": "proposedReconciler", "to": "fileSearchIndex", "label": "direct call: RebuildAsync", "variant": "dashed", "fromSide": "bottom", "toSide": "left", "via": [[1250, 700], [1382, 700], [1382, 270], [535, 270], [535, 146]], "labelAt": [1300, 715] }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Verified behavior",
+      "items": [
+        "Startup awaits RebuildAsync; FileSearchIndex scans System.IO directly. Searches see the empty Snapshot until atomic publication; SemaphoreSlim serializes updates.",
+        "Created/upload and copied → AddOrUpdateAsync; moved → MoveAsync; deleted → RemoveAsync. No Changed event or ready flag exists."
+      ]
+    },
+    {
+      "dot": "orange",
+      "title": "Proposed watcher normalization",
+      "items": [
+        "No watcher exists, so external and scan-time changes may be missed. Start monitoring first; queue callbacks and buffer until snapshot publication.",
+        "Copy is Created; Changed refreshes; rename removes/adds; boundary moves may be delete + create. Normalize, debounce, retry incomplete writes, and reconcile gaps."
+      ]
+    }
+  ]
+}

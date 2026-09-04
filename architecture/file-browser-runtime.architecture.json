@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "File Browser — High-Level Runtime Architecture",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/NicholasIbarra/app-file-browser",
+      "revision": "3419db8ee5170f61cc4d75461b5863ab295b1f16"
+    },
+    "viewBox": [1240, 560]
+  },
+  "components": [
+    { "id": "user", "type": "external", "label": "User", "sublabel": "Browser session", "pos": [20, 150], "size": [130, 72] },
+    { "id": "webClient", "type": "frontend", "label": "Web Client", "sublabel": "Vite + TypeScript UI", "pos": [190, 150], "size": [150, 72], "sources": [{ "path": "client/src/main.ts", "line": 1 }, { "path": "client/src/components/app-shell.ts", "line": 1 }] },
+    { "id": "httpClient", "type": "frontend", "label": "API Client", "sublabel": "Axios + typed services", "pos": [380, 150], "size": [160, 72], "sources": [{ "path": "client/src/api/http-client.ts", "line": 5 }, { "path": "client/src/api/index.ts", "line": 1 }] },
+    { "id": "apiHost", "type": "backend", "label": "ASP.NET Core API", "sublabel": "Middleware and routing", "pos": [580, 150], "size": [160, 72], "sources": [{ "path": "src/FileBrowser.Api/Program.cs", "line": 21 }] },
+    { "id": "controllers", "type": "backend", "label": "HTTP Controllers", "sublabel": "Directories + Search", "pos": [780, 150], "size": [160, 72], "sources": [{ "path": "src/FileBrowser.Api/Controllers/DirectoriesController.cs", "line": 9 }, { "path": "src/FileBrowser.Api/Controllers/SearchController.cs", "line": 7 }] },
+    { "id": "appServices", "type": "backend", "label": "Application Services", "sublabel": "Browse, mutate, and search", "pos": [980, 150], "size": [170, 72], "sources": [{ "path": "src/FileBrowser.Application/Browsing/DirectoryBrowserService.cs", "line": 7 }, { "path": "src/FileBrowser.Application/Search/FileSearchService.cs", "line": 5 }] },
+    { "id": "localFs", "type": "backend", "label": "Local File System", "sublabel": "IFileSystem adapter", "pos": [980, 300], "size": [170, 72], "sources": [{ "path": "src/FileBrowser.Infrastructure/FileSystem/LocalFileSystem.cs", "line": 5 }] },
+    { "id": "pathResolver", "type": "security", "label": "Path Resolver", "sublabel": "Root containment guard", "pos": [980, 440], "size": [170, 72], "sources": [{ "path": "src/FileBrowser.Infrastructure/FileSystem/FileSystemPathResolver.cs", "line": 6 }] },
+    { "id": "changeEvents", "type": "messagebus", "label": "Change Event Pipeline", "sublabel": "MediatR notifications", "pos": [760, 300], "size": [170, 72], "sources": [{ "path": "src/FileBrowser.Application/Browsing/DirectoryBrowserService.cs", "line": 65 }, { "path": "src/FileBrowser.Application/FileChanges/FileCreatedEventHandler.cs", "line": 6 }] },
+    { "id": "searchIndex", "type": "database", "label": "In-Memory Search Index", "sublabel": "Atomic metadata snapshot", "pos": [540, 300], "size": [170, 72], "sources": [{ "path": "src/FileBrowser.Infrastructure/Indexing/FileSearchIndex.cs", "line": 7 }] },
+    { "id": "indexWorker", "type": "backend", "label": "Indexing Worker", "sublabel": "Startup hosted service", "pos": [320, 300], "size": [160, 72], "sources": [{ "path": "src/FileBrowser.Infrastructure/BackgroundServices/FileIndexHostedService.cs", "line": 6 }] },
+    { "id": "hostFileSystem", "type": "external", "label": "Host File System", "sublabel": "Configured HomeDirectory", "pos": [540, 440], "size": [170, 72], "sources": [{ "path": "src/FileBrowser.Api/appsettings.Development.json", "line": 8 }, { "path": "src/FileBrowser.Infrastructure/FileSystem/FileBrowserOptions.cs", "line": 3 }] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Browser / Untrusted Client", "wraps": ["webClient", "httpClient"], "pad": 24 },
+    { "kind": "security-group", "label": "Server Process Trust Boundary", "wraps": ["apiHost", "controllers", "appServices", "pathResolver", "localFs", "changeEvents", "searchIndex", "indexWorker"], "pad": 28 },
+    { "kind": "security-group", "label": "Configured File Access Boundary", "wraps": ["pathResolver", "localFs"], "pad": 16 }
+  ],
+  "connections": [
+    { "id": "userUi", "from": "user", "to": "webClient", "label": "UI actions", "variant": "emphasis", "labelAt": [170, 236] },
+    { "id": "uiApi", "from": "webClient", "to": "httpClient", "label": "browse / search / mutate", "variant": "emphasis", "labelDy": 60 },
+    { "id": "clientHost", "from": "httpClient", "to": "apiHost", "label": "HTTP JSON", "variant": "emphasis", "labelAt": [560, 146] },
+    { "id": "hostControllers", "from": "apiHost", "to": "controllers", "label": "route + bind", "variant": "emphasis", "labelDy": -28 },
+    { "id": "controllersServices", "from": "controllers", "to": "appServices", "label": "application calls", "variant": "emphasis", "labelDy": -28 },
+    { "id": "servicesFs", "from": "appServices", "to": "localFs", "label": "IFileSystem operations", "labelAt": [1170, 236] },
+    { "id": "servicesIndex", "from": "appServices", "to": "searchIndex", "label": "search snapshot", "fromSide": "bottom", "toSide": "top", "labelAt": [850, 260] },
+    { "id": "servicesEvents", "from": "appServices", "to": "changeEvents", "label": "publish after mutation", "labelAt": [950, 275] },
+    { "id": "eventsIndex", "from": "changeEvents", "to": "searchIndex", "label": "incremental update", "labelDy": 54 },
+    { "id": "workerIndex", "from": "indexWorker", "to": "searchIndex", "label": "startup rebuild", "labelDy": -28 },
+    { "id": "fsResolver", "from": "localFs", "to": "pathResolver", "label": "canonicalize + constrain", "labelAt": [1170, 386] },
+    { "id": "fsHost", "from": "localFs", "to": "hostFileSystem", "label": "authorized OS I/O" },
+    { "id": "indexHost", "from": "searchIndex", "to": "hostFileSystem", "label": "recursive metadata scan", "labelAt": [510, 386] }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Primary request path", "items": ["User → Web Client → API Client → ASP.NET Core → Controllers → Application Services", "Directory operations resolve paths before host file-system access"] },
+    { "dot": "amber", "title": "Trust boundaries", "items": ["HTTP crosses from the untrusted browser into the server process", "The configured root constrains which host paths the application may reach"] },
+    { "dot": "violet", "title": "Runtime state", "items": ["A hosted worker scans files into an in-memory search index", "File-change handlers keep searchable metadata synchronized"] }
+  ]
+}
