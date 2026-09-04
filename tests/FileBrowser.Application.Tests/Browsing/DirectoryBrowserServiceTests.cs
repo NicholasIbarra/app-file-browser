@@ -87,9 +87,9 @@ public sealed class DirectoryBrowserServiceTests
         var lastModified = DateTimeOffset.UtcNow;
 
         var file = new FileItem(
-            "afile.txt", "/afile.txt", FileSystemEntryType.File, 10, lastModified);
+            "afile.txt", "/afile.txt", FileSystemEntryType.File, 10, null, lastModified);
         var directory = new FileItem(
-            "zdirectory", "/zdirectory", FileSystemEntryType.Directory, null, lastModified);
+            "zdirectory", "/zdirectory", FileSystemEntryType.Directory, null, 3, lastModified);
 
         _fileSystem
             .GetDirectoryContentsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -108,9 +108,9 @@ public sealed class DirectoryBrowserServiceTests
         var lastModified = DateTimeOffset.UtcNow;
 
         var beta = new FileItem(
-            "beta", "/beta", FileSystemEntryType.Directory, null, lastModified);
+            "beta", "/beta", FileSystemEntryType.Directory, null, 0, lastModified);
         var alpha = new FileItem(
-            "Alpha", "/Alpha", FileSystemEntryType.Directory, null, lastModified);
+            "Alpha", "/Alpha", FileSystemEntryType.Directory, null, 0, lastModified);
 
         _fileSystem
             .GetDirectoryContentsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -128,7 +128,7 @@ public sealed class DirectoryBrowserServiceTests
     {
         var lastModified = DateTimeOffset.UtcNow;
         var entry = new FileItem(
-            "report.pdf", "/Documents/report.pdf", FileSystemEntryType.File, 2048, lastModified);
+            "Documents", "/Documents", FileSystemEntryType.Directory, null, 4, lastModified);
 
         _fileSystem
             .GetDirectoryContentsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -141,6 +141,7 @@ public sealed class DirectoryBrowserServiceTests
         Assert.Equal(entry.Path, mapped.Path);
         Assert.Equal(entry.Type, mapped.Type);
         Assert.Equal(entry.Size, mapped.Size);
+        Assert.Equal(entry.ChildCount, mapped.ChildCount);
         Assert.Equal(entry.LastModified, mapped.LastModified);
     }
 
@@ -164,6 +165,7 @@ public sealed class DirectoryBrowserServiceTests
             "/Documents/report.pdf",
             FileSystemEntryType.File,
             1024,
+            null,
             DateTimeOffset.UtcNow);
         var content = new MemoryStream("report"u8.ToArray());
         _fileSystem
@@ -188,6 +190,7 @@ public sealed class DirectoryBrowserServiceTests
             "/notes.txt",
             FileSystemEntryType.File,
             5,
+            null,
             DateTimeOffset.UtcNow);
         var content = new MemoryStream("notes"u8.ToArray());
         _fileSystem.GetFileAsync("/notes.txt", cts.Token).Returns(file);
@@ -221,6 +224,7 @@ public sealed class DirectoryBrowserServiceTests
             "Documents",
             "/Documents",
             FileSystemEntryType.Directory,
+            null,
             null,
             DateTimeOffset.UtcNow);
         _fileSystem

@@ -4,11 +4,11 @@ import {
   downloadFile,
   getDirectory,
   moveEntry,
-  reIndexDirectories,
   uploadFile,
   type DirectoryContents,
 } from '../api'
-import { getParentPath, getPathBreadcrumbs, getUrlPath, updateUrl, type NavigationMode } from '../utils/navigation'
+import { formatFileSize } from '../utils/file-size'
+import { getParentPath, getPathBreadcrumbs, updateUrl, type NavigationMode } from '../utils/navigation'
 import type { AppShell } from './app-shell'
 
 export class DirectoryExplorer {
@@ -173,23 +173,23 @@ export class DirectoryExplorer {
     return directory === '/' ? `/${name}` : `${directory.replace(/\/$/, '')}/${name}`
   }
 
-  private async reIndex() {
-    const { reIndexButton, status } = this.elements
-    reIndexButton.disabled = true
-    reIndexButton.textContent = 'Re-indexing…'
-    status.hidden = false
-    status.textContent = 'Rebuilding the search index…'
-    try {
-      await reIndexDirectories()
-      await this.load(getUrlPath())
-    } catch (error) {
-      status.textContent = 'Unable to rebuild the search index.'
-      console.error(error)
-    } finally {
-      reIndexButton.disabled = false
-      reIndexButton.textContent = 'Re-index'
-    }
-  }
+  // private async reIndex() {
+  //   const { reIndexButton, status } = this.elements
+  //   reIndexButton.disabled = true
+  //   reIndexButton.textContent = 'Re-indexing…'
+  //   status.hidden = false
+  //   status.textContent = 'Rebuilding the search index…'
+  //   try {
+  //     await reIndexDirectories()
+  //     await this.load(getUrlPath())
+  //   } catch (error) {
+  //     status.textContent = 'Unable to rebuild the search index.'
+  //     console.error(error)
+  //   } finally {
+  //     reIndexButton.disabled = false
+  //     reIndexButton.textContent = 'Re-index'
+  //   }
+  // }
 
   private renderPath(path?: string | null) {
     const target = this.elements.path
@@ -240,10 +240,19 @@ export class DirectoryExplorer {
         button.textContent = `${entry.name ?? entry.path}/`
         button.addEventListener('click', () => void this.load(entry.path!, 'push'))
         entryMain.append(button)
+
+        if (entry.childCount != null) {
+          const label = entry.childCount === 1 ? 'item' : 'items'
+          entryMain.append(this.createEntryMetadata(`${entry.childCount} ${label}`))
+        }
       } else {
         const name = document.createElement('span')
         name.textContent = entry.name ?? entry.path ?? '(unnamed file)'
         entryMain.append(name)
+
+        if (entry.size != null) {
+          entryMain.append(this.createEntryMetadata(formatFileSize(entry.size)))
+        }
       }
       item.append(entryMain)
 
@@ -290,6 +299,13 @@ export class DirectoryExplorer {
       item.textContent = 'This folder is empty.'
       entries.append(item)
     }
+  }
+
+  private createEntryMetadata(text: string) {
+    const metadata = document.createElement('span')
+    metadata.className = 'entry-metadata'
+    metadata.textContent = text
+    return metadata
   }
 
   private createAction(

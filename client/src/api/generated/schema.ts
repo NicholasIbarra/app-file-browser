@@ -317,6 +317,8 @@ export interface components {
             type?: components["schemas"]["FileSystemEntryType"];
             /** Format: int64 */
             size?: number | null;
+            /** Format: int32 */
+            childCount?: number | null;
             /** Format: date-time */
             lastModified?: string;
         };

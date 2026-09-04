@@ -27,7 +27,8 @@ public sealed class AzureFileSystem : IFileSystem
         {
             if (item.IsPrefix)
             {
-                entries.Add(MapDirectory(item.Prefix));
+                var childCount = await GetChildCountAsync(item.Prefix, cancellationToken);
+                entries.Add(MapDirectory(item.Prefix, childCount));
             }
             else if (item.IsBlob && !IsDirectoryMarker(item.Blob.Name))
             {
@@ -68,7 +69,7 @@ public sealed class AzureFileSystem : IFileSystem
         var relativePath = NormalizePath(path);
         if (relativePath.Length == 0)
         {
-            return new FileItem("/", "/", FileSystemEntryType.Directory, null, DateTimeOffset.MinValue);
+            return new FileItem("/", "/", FileSystemEntryType.Directory, null, null, DateTimeOffset.MinValue);
         }
 
         var client = _container.GetBlobClient(ToBlobName(relativePath));
@@ -76,7 +77,7 @@ public sealed class AzureFileSystem : IFileSystem
         {
             var properties = await client.GetPropertiesAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
             return new FileItem(GetName(relativePath), ToPublicPath(relativePath), FileSystemEntryType.File,
-                properties.Value.ContentLength, properties.Value.LastModified);
+                properties.Value.ContentLength, null, properties.Value.LastModified);
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
@@ -84,7 +85,7 @@ public sealed class AzureFileSystem : IFileSystem
         }
 
         return await DirectoryExistsAsync(relativePath, cancellationToken)
-            ? new FileItem(GetName(relativePath), ToPublicPath(relativePath), FileSystemEntryType.Directory, null, DateTimeOffset.MinValue)
+            ? new FileItem(GetName(relativePath), ToPublicPath(relativePath), FileSystemEntryType.Directory, null, null, DateTimeOffset.MinValue)
             : null;
     }
 
@@ -192,16 +193,48 @@ public sealed class AzureFileSystem : IFileSystem
         return false;
     }
 
+    private async Task<int> GetChildCountAsync(string prefix, CancellationToken cancellationToken)
+    {
+        var count = 0;
+
+        await foreach (var item in _container.GetBlobsByHierarchyAsync(
+                           BlobTraits.None,
+                           BlobStates.None,
+                           "/",
+                           prefix,
+                           cancellationToken))
+        {
+            if (item.IsPrefix || item.IsBlob && !IsDirectoryMarker(item.Blob.Name))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
     private FileItem MapBlob(BlobItem blob)
     {
         var path = FromBlobName(blob.Name);
-        return new FileItem(GetName(path), ToPublicPath(path), FileSystemEntryType.File, blob.Properties.ContentLength, blob.Properties.LastModified ?? DateTimeOffset.MinValue);
+        return new FileItem(
+            GetName(path),
+            ToPublicPath(path),
+            FileSystemEntryType.File,
+            blob.Properties.ContentLength,
+            null,
+            blob.Properties.LastModified ?? DateTimeOffset.MinValue);
     }
 
-    private FileItem MapDirectory(string prefix)
+    private FileItem MapDirectory(string prefix, int? childCount = null)
     {
         var path = FromBlobName(prefix.TrimEnd('/'));
-        return new FileItem(GetName(path), ToPublicPath(path), FileSystemEntryType.Directory, null, DateTimeOffset.MinValue);
+        return new FileItem(
+            GetName(path),
+            ToPublicPath(path),
+            FileSystemEntryType.Directory,
+            null,
+            childCount,
+            DateTimeOffset.MinValue);
     }
 
     private void AddParentDirectories(string blobName, string listingPrefix, HashSet<string> seen, List<FileItem> entries)

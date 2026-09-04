@@ -5,4 +5,5 @@ public sealed record FileItem(
     string Path,
     FileSystemEntryType Type,
     long? Size,
+    int? ChildCount,
     DateTimeOffset LastModified);

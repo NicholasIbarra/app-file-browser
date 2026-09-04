@@ -279,6 +279,12 @@ kbd {
   overflow-wrap: anywhere;
 }
 
+.entry-metadata {
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: calc(1em - 2pt);
+}
+
 .entry-actions {
   position: relative;
   flex: 0 0 auto;

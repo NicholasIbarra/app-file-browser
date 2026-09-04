@@ -136,8 +136,7 @@ public class DirectoryBrowserService : IDirectoryBrowserService
             entry.Path,
             entry.Type,
             entry.Size,
+            entry.ChildCount,
             entry.LastModified);
     }
-
-
 }

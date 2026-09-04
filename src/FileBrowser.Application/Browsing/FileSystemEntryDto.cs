@@ -7,4 +7,5 @@ public sealed record FileSystemEntryDto(
     string Path,
     FileSystemEntryType Type,
     long? Size,
+    int? ChildCount,
     DateTimeOffset LastModified);

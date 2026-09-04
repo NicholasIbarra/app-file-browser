@@ -56,6 +56,7 @@ public sealed class FileSearchIndexTests : IDisposable
                     "/Documents/report.pdf",
                     FileSystemEntryType.File,
                     42,
+                    null,
                     DateTimeOffset.UtcNow)
             ]);
         using var sut = new FileSearchIndex(fileSystem);
@@ -77,7 +78,7 @@ public sealed class FileSearchIndexTests : IDisposable
         fileSystem
             .GetFileAsync("/Documents", Arg.Any<CancellationToken>())
             .Returns(new FileItem(
-                "Documents", "/Documents", FileSystemEntryType.Directory, null, modified));
+                "Documents", "/Documents", FileSystemEntryType.Directory, null, null, modified));
         fileSystem
             .GetAllDirectoryContentsAsync("/Documents", Arg.Any<CancellationToken>())
             .Returns([
@@ -86,6 +87,7 @@ public sealed class FileSearchIndexTests : IDisposable
                     "/Documents/report.pdf",
                     FileSystemEntryType.File,
                     42,
+                    null,
                     modified)
             ]);
         using var sut = new FileSearchIndex(fileSystem);

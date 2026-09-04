@@ -349,6 +349,7 @@ public class LocalFileSystem : IFileSystem
                 Path: _pathResolver.ToRelativePath(file.FullName),
                 Type: FileSystemEntryType.File,
                 Size: file.Length,
+                ChildCount: null,
                 LastModified: file.LastWriteTimeUtc),
 
             DirectoryInfo directory => new FileItem(
@@ -356,10 +357,21 @@ public class LocalFileSystem : IFileSystem
                 Path: _pathResolver.ToRelativePath(directory.FullName),
                 Type: FileSystemEntryType.Directory,
                 Size: null,
+                ChildCount: GetChildCount(_pathResolver.ToRelativePath(directory.FullName)),
                 LastModified: directory.LastWriteTimeUtc),
 
             _ => throw new NotSupportedException(
                 $"Unsupported filesystem entry '{entry.GetType().Name}'.")
         };
+    }
+
+    private int? GetChildCount(string path)
+    {
+        var root = _pathResolver.Resolve(path);
+        var directoryInfo = new DirectoryInfo(root);
+
+        return directoryInfo.Exists
+            ? directoryInfo.EnumerateFileSystemInfos().Count()
+            : null;
     }
 }
