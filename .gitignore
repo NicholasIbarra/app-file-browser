@@ -482,3 +482,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Local file explorer storage root (auto-created on startup)
+local-storage/

@@ -1,5 +1,7 @@
 using FileBrowser.Api.ErrorHandling;
 using FileBrowser.Api.Extensions;
+using FileBrowser.Application;
+using FileBrowser.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +11,8 @@ builder.Services.AddProblemDetails();
 builder.Services.AddCorsPolicy();
 builder.Services.AddDefaultHealthChecks();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddApplication();
+builder.Services.AddInfrastructure(builder.Configuration, builder.Environment.ContentRootPath);
 
 var app = builder.Build();
 
