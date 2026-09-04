@@ -1,3 +1,5 @@
+using Azure.Identity;
+using Azure.Storage.Blobs;
 using FileBrowser.Application.Abtractstions.FileSystem;
 using FileBrowser.Application.Abtractstions.Indexing;
 using FileBrowser.Application.Browsing;
@@ -36,26 +38,24 @@ public static class DependencyInjection
                 Path.Combine(contentRootPath, options.HomeDirectory));
         }
 
-        // A freshly cloned repo has no local storage folder yet - it's
-        // gitignored - so create it on startup for the Local provider
-        // instead of failing the first request.
-        if (options.Provider == FileSystemProvider.Local && options.CreateIfMissing)
-        {
-            Directory.CreateDirectory(options.HomeDirectory);
-        }
-
-        services.AddSingleton<IFileSystemPathResolver, FileSystemPathResolver>();
-
         switch (options.Provider)
         {
             case FileSystemProvider.Local:
+                // A freshly cloned repo has no local storage folder yet - it's
+                // gitignored - so create it on startup instead of failing the
+                // first request.
+                if (options.CreateIfMissing)
+                {
+                    Directory.CreateDirectory(options.HomeDirectory);
+                }
+
+                services.AddSingleton<IFileSystemPathResolver, FileSystemPathResolver>();
                 services.AddSingleton<IFileSystem, LocalFileSystem>();
                 break;
 
             case FileSystemProvider.Azure:
-                throw new NotSupportedException(
-                    "The Azure file system provider is not implemented yet. " +
-                    "Set \"FileBrowser:Provider\" to \"Local\" in configuration.");
+                services.AddSingleton<IFileSystem>(_ => CreateAzureBlobFileSystem(configuration));
+                break;
 
             default:
                 throw new NotSupportedException(
@@ -63,5 +63,43 @@ public static class DependencyInjection
         }
 
         return services;
+    }
+
+    private static AzureBlobFileSystem CreateAzureBlobFileSystem(IConfiguration configuration)
+    {
+        var azureOptions = new AzureBlobOptions();
+        configuration.GetSection(AzureBlobOptions.SectionName).Bind(azureOptions);
+
+        if (string.IsNullOrWhiteSpace(azureOptions.ContainerName))
+        {
+            throw new InvalidOperationException(
+                $"\"{AzureBlobOptions.SectionName}:ContainerName\" must be configured " +
+                "when \"FileBrowser:Provider\" is \"Azure\".");
+        }
+
+        BlobServiceClient serviceClient;
+
+        if (!string.IsNullOrWhiteSpace(azureOptions.ConnectionString))
+        {
+            serviceClient = new BlobServiceClient(azureOptions.ConnectionString);
+        }
+        else if (!string.IsNullOrWhiteSpace(azureOptions.AccountUrl))
+        {
+            serviceClient = new BlobServiceClient(
+                new Uri(azureOptions.AccountUrl),
+                new DefaultAzureCredential());
+        }
+        else
+        {
+            throw new InvalidOperationException(
+                $"Either \"{AzureBlobOptions.SectionName}:ConnectionString\" or " +
+                $"\"{AzureBlobOptions.SectionName}:AccountUrl\" must be configured " +
+                "when \"FileBrowser:Provider\" is \"Azure\".");
+        }
+
+        var containerClient = serviceClient.GetBlobContainerClient(azureOptions.ContainerName);
+        containerClient.CreateIfNotExists();
+
+        return new AzureBlobFileSystem(containerClient);
     }
 }

@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+name: app-file-browser
+
+# This repo also ships infra/main.bicep as a plain ARM/Bicep template that
+# doesn't depend on azd's own image-build wiring - see deploy.sh for the
+# verified path (az acr build + az deployment group create). If you have
+# the azd CLI and prefer `azd up`, these service definitions point it at
+# the two Dockerfiles; you will likely still need to set FileBrowser and
+# Cors/API_BASE_URL environment variables on the container apps yourself,
+# same as deploy.sh does.
+services:
+  api:
+    project: src/FileBrowser.Api
+    host: containerapp
+    language: dotnet
+    docker:
+      path: Dockerfile
+      context: ../../
+  web:
+    project: client
+    host: containerapp
+    language: js
+    docker:
+      path: Dockerfile
+      context: .

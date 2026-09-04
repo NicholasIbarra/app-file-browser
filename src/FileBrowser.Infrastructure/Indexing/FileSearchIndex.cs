@@ -1,27 +1,26 @@
-﻿using FileBrowser.Application.Abtractstions.Indexing;
-using FileBrowser.Infrastructure.FileSystem;
-using Microsoft.Extensions.Options;
+using FileBrowser.Application.Abtractstions.FileSystem;
+using FileBrowser.Application.Abtractstions.Indexing;
 
 namespace FileBrowser.Infrastructure.Indexing;
 
 public class FileSearchIndex : IFileSearchIndex, IDisposable
 {
-    private readonly string _rootPath;
+    private readonly IFileSystem _fileSystem;
     private readonly SemaphoreSlim _rebuildLock = new(1, 1);
 
     private IReadOnlyList<FileIndexEntry> _snapshot =
         Array.Empty<FileIndexEntry>();
 
 
-    public FileSearchIndex(IOptions<FileBrowserOptions> options)
+    public FileSearchIndex(IFileSystem fileSystem)
     {
-        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(fileSystem);
 
-        _rootPath = Path.GetFullPath(options.Value.HomeDirectory);
+        _fileSystem = fileSystem;
     }
 
     /// <summary>
-    /// Volatile.Write means readers see either the entire old index or entire new index. 
+    /// Volatile.Write means readers see either the entire old index or entire new index.
     /// They never observe an index halfway through being rebuilt.
     /// @nib: review
     /// </summary>
@@ -34,9 +33,7 @@ public class FileSearchIndex : IFileSearchIndex, IDisposable
 
         try
         {
-            var entries = await Task.Run(
-                () => BuildIndex(cancellationToken),
-                cancellationToken);
+            var entries = await BuildIndexAsync(cancellationToken);
 
             // Searches continue using the old snapshot until
             // the complete new index is ready.
@@ -48,41 +45,44 @@ public class FileSearchIndex : IFileSearchIndex, IDisposable
         }
     }
 
-    public IReadOnlyList<FileIndexEntry> BuildIndex(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<FileIndexEntry>> BuildIndexAsync(CancellationToken cancellationToken)
     {
         var results = new List<FileIndexEntry>();
 
-        var root = new DirectoryInfo(_rootPath);
-
-        if (!root.Exists)
-        {
-            return Array.Empty<FileIndexEntry>();
-        }
-
-        var options = new EnumerationOptions
-        {
-            RecurseSubdirectories = true,
-            IgnoreInaccessible = true,
-            ReturnSpecialDirectories = false,
-            AttributesToSkip = FileAttributes.ReparsePoint // Avoid following directory junctions / symlinks
-        };
-
-        foreach(var entry in root.EnumerateFileSystemInfos("*", options))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var isDirectory = (entry.Attributes & FileAttributes.Directory) != 0;
-
-            results.Add(new FileIndexEntry(
-                Name: entry.Name,
-                RelativePath: Path.GetRelativePath(_rootPath, entry.FullName),
-                FullPath: entry.FullName,
-                IsDirectory: isDirectory,
-                Extension: isDirectory ? null : Path.GetExtension(entry.Name)));
-        }
+        await WalkAsync("/", results, cancellationToken);
 
         return results;
     }
+
+    private async Task WalkAsync(
+        string path,
+        List<FileIndexEntry> results,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var contents = await _fileSystem.GetDirectoryContentsAsync(path, cancellationToken);
+
+        foreach (var entry in contents.Entries)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var isDirectory = entry.Type == FileSystemEntryType.Directory;
+
+            results.Add(new FileIndexEntry(
+                Name: entry.Name,
+                RelativePath: entry.Path,
+                FullPath: entry.Path,
+                IsDirectory: isDirectory,
+                Extension: isDirectory ? null : Path.GetExtension(entry.Name)));
+
+            if (isDirectory)
+            {
+                await WalkAsync(entry.Path, results, cancellationToken);
+            }
+        }
+    }
+
     public void Dispose()
     {
         _rebuildLock.Dispose();

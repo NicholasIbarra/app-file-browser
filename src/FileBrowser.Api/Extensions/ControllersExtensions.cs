@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
+using Microsoft.Extensions.Configuration;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -13,26 +14,42 @@ public static partial class ControllersExtensions
 
     public static WebApplication MapDefaultEndpoints(this WebApplication app)
     {
-        if (app.Environment.IsDevelopment())
+        // Mapped in every environment: Azure Container Apps / App Service
+        // health probes hit these in Production, not just locally.
+        app.MapHealthChecks(HealthEndpointPath);
+        app.MapHealthChecks(AlivenessEndpointPath, new HealthCheckOptions
         {
-            app.MapHealthChecks(HealthEndpointPath);
-            app.MapHealthChecks(AlivenessEndpointPath, new HealthCheckOptions
-            {
-                Predicate = r => r.Tags.Contains("live")
-            });
-        }
+            Predicate = r => r.Tags.Contains("live")
+        });
 
         return app;
     }
 
-    public static IServiceCollection AddCorsPolicy(this IServiceCollection services)
+    public static IServiceCollection AddCorsPolicy(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
+        var allowedOrigins = configuration
+            .GetSection("Cors:AllowedOrigins")
+            .Get<string[]>() ?? [];
+
         services.AddCors(options =>
         {
             options.AddPolicy(CoreCorsPolicyName, policy =>
-                policy.AllowAnyOrigin()
-                    .AllowAnyMethod()
-                    .AllowAnyHeader());
+            {
+                policy.AllowAnyMethod().AllowAnyHeader();
+
+                // No origins configured (e.g. local dev): allow any origin.
+                // In Azure, set "Cors:AllowedOrigins" to the client app's URL.
+                if (allowedOrigins.Length > 0)
+                {
+                    policy.WithOrigins(allowedOrigins);
+                }
+                else
+                {
+                    policy.AllowAnyOrigin();
+                }
+            });
         });
 
         return services;
