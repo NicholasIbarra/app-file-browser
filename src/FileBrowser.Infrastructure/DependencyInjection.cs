@@ -1,6 +1,10 @@
 using FileBrowser.Application.Abtractstions.FileSystem;
+using FileBrowser.Application.Abtractstions.Indexing;
 using FileBrowser.Application.Browsing;
+using FileBrowser.Application.Search;
+using FileBrowser.Infrastructure.BackgroundServices;
 using FileBrowser.Infrastructure.FileSystem;
+using FileBrowser.Infrastructure.Indexing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -18,6 +22,10 @@ public static class DependencyInjection
         ArgumentNullException.ThrowIfNull(contentRootPath);
 
         services.AddScoped<IDirectoryBrowserService, DirectoryBrowserService>();
+        services.AddScoped<IFileSearchService, FileSearchService>();
+        services.AddSingleton<IFileSearchIndex, FileSearchIndex>();
+        services.AddSingleton<IFileSearchScorer, FileSearchScorer>();
+        services.AddHostedService<FileIndexHostedService>();
 
         var options = new FileBrowserOptions();
         configuration.GetSection(FileBrowserOptions.SectionName).Bind(options);
