@@ -11,6 +11,38 @@ public sealed class FileSearchIndexTests : IDisposable
         $"file-browser-index-tests-{Guid.NewGuid():N}");
 
     [Fact]
+    public async Task AddOrUpdateAsync_NewFile_AddsEntry()
+    {
+        Directory.CreateDirectory(_rootPath);
+        var filePath = Path.Combine(_rootPath, "uploaded.txt");
+        await File.WriteAllTextAsync(filePath, "uploaded");
+        using var sut = CreateIndex();
+
+        await sut.AddOrUpdateAsync("/uploaded.txt", CancellationToken.None);
+
+        var entry = Assert.Single(sut.Snapshot);
+        Assert.Equal("uploaded.txt", entry.Name);
+        Assert.Equal(filePath, entry.FullPath);
+        Assert.False(entry.IsDirectory);
+        Assert.Equal(".txt", entry.Extension);
+    }
+
+    [Fact]
+    public async Task AddOrUpdateAsync_ExistingFile_ReplacesEntryWithoutDuplicate()
+    {
+        Directory.CreateDirectory(_rootPath);
+        var filePath = Path.Combine(_rootPath, "uploaded.txt");
+        await File.WriteAllTextAsync(filePath, "first version");
+        using var sut = CreateIndex();
+        await sut.RebuildAsync(CancellationToken.None);
+        await File.WriteAllTextAsync(filePath, "second version");
+
+        await sut.AddOrUpdateAsync("/uploaded.txt", CancellationToken.None);
+
+        Assert.Single(sut.Snapshot, entry => entry.Name == "uploaded.txt");
+    }
+
+    [Fact]
     public async Task RemoveAsync_FilePath_RemovesOnlyMatchingEntry()
     {
         Directory.CreateDirectory(_rootPath);

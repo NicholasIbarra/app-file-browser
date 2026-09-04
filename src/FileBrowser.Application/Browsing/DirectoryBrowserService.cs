@@ -1,5 +1,4 @@
 ﻿using FileBrowser.Application.Abtractstions.FileSystem;
-
 using FileBrowser.Application.FileChanges;
 using MediatR;
 
@@ -35,7 +34,7 @@ public class DirectoryBrowserService : IDirectoryBrowserService
         return new DirectoryContentsDto(contents.Path, entries);
     }
 
-    public Task UploadAsync(
+    public async Task UploadAsync(
         string path,
         Stream content,
         bool overwrite = false,
@@ -43,7 +42,9 @@ public class DirectoryBrowserService : IDirectoryBrowserService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         ArgumentNullException.ThrowIfNull(content);
-        return _fileSystem.UploadAsync(path, content, overwrite, cancellationToken);
+
+        await _fileSystem.UploadAsync(path, content, overwrite, cancellationToken);
+        await _publisher.Publish(new FileCreatedEvent(path), cancellationToken);
     }
 
     public async Task DeleteAsync(
@@ -52,6 +53,7 @@ public class DirectoryBrowserService : IDirectoryBrowserService
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
         await _fileSystem.DeleteAsync(path, recursive, cancellationToken);
         await _publisher.Publish(new FileDeletedEvent(path), cancellationToken);
     }

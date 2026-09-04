@@ -76,6 +76,41 @@ public class FileSearchIndex : IFileSearchIndex, IDisposable
         }
     }
 
+    public async Task AddOrUpdateAsync(string path, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        await _rebuildLock.WaitAsync(cancellationToken);
+
+        try
+        {
+            var relativePath = NormalizeRelativePath(path);
+            var fullPath = GetFullPath(relativePath);
+            var file = new FileInfo(fullPath);
+
+            if (!file.Exists)
+            {
+                throw new FileNotFoundException(
+                    $"Cannot add '{path}' to the index because it does not exist.",
+                    path);
+            }
+
+            var newEntry = Map(file);
+            var entries = Snapshot
+                .Where(entry => !NormalizeRelativePath(entry.RelativePath).Equals(
+                    relativePath,
+                    StringComparison.OrdinalIgnoreCase))
+                .Append(newEntry)
+                .ToArray();
+
+            Volatile.Write(ref _snapshot, entries);
+        }
+        finally
+        {
+            _rebuildLock.Release();
+        }
+    }
+
     public IReadOnlyList<FileIndexEntry> BuildIndex(CancellationToken cancellationToken)
     {
         var results = new List<FileIndexEntry>();
@@ -99,14 +134,7 @@ public class FileSearchIndex : IFileSearchIndex, IDisposable
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var isDirectory = (entry.Attributes & FileAttributes.Directory) != 0;
-
-            results.Add(new FileIndexEntry(
-                Name: entry.Name,
-                RelativePath: Path.GetRelativePath(_rootPath, entry.FullName),
-                FullPath: entry.FullName,
-                IsDirectory: isDirectory,
-                Extension: isDirectory ? null : Path.GetExtension(entry.Name)));
+            results.Add(Map(entry));
         }
 
         return results;
@@ -117,6 +145,36 @@ public class FileSearchIndex : IFileSearchIndex, IDisposable
         return path
             .Replace('\\', '/')
             .Trim('/');
+    }
+
+    private string GetFullPath(string relativePath)
+    {
+        var fullPath = Path.GetFullPath(Path.Combine(
+            _rootPath,
+            relativePath.Replace('/', Path.DirectorySeparatorChar)));
+        var pathFromRoot = Path.GetRelativePath(_rootPath, fullPath);
+
+        if (Path.IsPathRooted(pathFromRoot)
+            || pathFromRoot.Equals("..", StringComparison.Ordinal)
+            || pathFromRoot.StartsWith($"..{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+        {
+            throw new UnauthorizedAccessException(
+                $"Path '{relativePath}' resolves outside the indexed root.");
+        }
+
+        return fullPath;
+    }
+
+    private FileIndexEntry Map(FileSystemInfo entry)
+    {
+        var isDirectory = (entry.Attributes & FileAttributes.Directory) != 0;
+
+        return new FileIndexEntry(
+            Name: entry.Name,
+            RelativePath: Path.GetRelativePath(_rootPath, entry.FullName),
+            FullPath: entry.FullName,
+            IsDirectory: isDirectory,
+            Extension: isDirectory ? null : Path.GetExtension(entry.Name));
     }
 
     public void Dispose()

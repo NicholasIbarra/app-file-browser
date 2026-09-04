@@ -168,6 +168,38 @@ public sealed class DirectoryBrowserServiceTests
     }
 
     [Fact]
+    public async Task UploadAsync_AfterUpload_PublishesFileCreatedEvent()
+    {
+        await using var content = new MemoryStream("content"u8.ToArray());
+        using var cts = new CancellationTokenSource();
+
+        await _sut.UploadAsync("/notes.txt", content, cancellationToken: cts.Token);
+
+        await _publisher.Received(1).Publish(
+            Arg.Is<FileCreatedEvent>(notification => notification.Path == "/notes.txt"),
+            cts.Token);
+    }
+
+    [Fact]
+    public async Task UploadAsync_WhenUploadFails_DoesNotPublishFileCreatedEvent()
+    {
+        _fileSystem
+            .UploadAsync(
+                Arg.Any<string>(),
+                Arg.Any<Stream>(),
+                Arg.Any<bool>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new IOException("Upload failed.")));
+        await using var content = new MemoryStream("content"u8.ToArray());
+
+        await Assert.ThrowsAsync<IOException>(() => _sut.UploadAsync("/notes.txt", content));
+
+        await _publisher.DidNotReceive().Publish(
+            Arg.Any<FileCreatedEvent>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task DeleteAsync_ForwardsRequestToFileSystem()
     {
         using var cts = new CancellationTokenSource();
