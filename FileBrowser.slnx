@@ -14,4 +14,7 @@
     <Project Path="tests/FileBrowser.Infrastructure.Tests/FileBrowser.Infrastructure.Tests.csproj" />
     <Project Path="tests/FileBrowser.Test/FileBrowser.Test.csproj" />
   </Folder>
+  <Folder Name="/utils/">
+    <Project Path="utils/FileBrowser.SampleDataGenerator/FileBrowser.SampleDataGenerator.csproj" />
+  </Folder>
 </Solution>
