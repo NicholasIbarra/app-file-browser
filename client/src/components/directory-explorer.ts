@@ -17,7 +17,7 @@ export class DirectoryExplorer {
 
   constructor(elements: AppShell) {
     this.elements = elements
-    elements.reIndexButton.addEventListener('click', () => void this.reIndex())
+    // elements.reIndexButton.addEventListener('click', () => void this.reIndex())
     elements.uploadButton.addEventListener('click', () => elements.uploadInput.click())
     elements.uploadInput.addEventListener('change', () => void this.uploadSelectedFiles())
 
