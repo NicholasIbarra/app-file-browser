@@ -20,6 +20,14 @@ export class DirectoryExplorer {
     elements.reIndexButton.addEventListener('click', () => void this.reIndex())
     elements.uploadButton.addEventListener('click', () => elements.uploadInput.click())
     elements.uploadInput.addEventListener('change', () => void this.uploadSelectedFiles())
+
+    document.addEventListener('click', (event) => {
+      if (!(event.target instanceof Element) || event.target.closest('.entry-actions')) return
+      this.closeActionMenus()
+    })
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') this.closeActionMenus(true)
+    })
   }
 
   async load(path?: string, urlMode: NavigationMode = 'none') {
@@ -143,8 +151,21 @@ export class DirectoryExplorer {
   }
 
   private setActionsDisabled(disabled: boolean) {
+    for (const menu of this.elements.entries.querySelectorAll<HTMLDetailsElement>('.entry-actions')) {
+      menu.classList.toggle('is-disabled', disabled)
+      const toggle = menu.querySelector<HTMLElement>('summary')
+      toggle?.setAttribute('aria-disabled', String(disabled))
+      if (disabled) menu.open = false
+    }
     for (const button of this.elements.entries.querySelectorAll<HTMLButtonElement>('.entry-action')) {
       button.disabled = disabled
+    }
+  }
+
+  private closeActionMenus(restoreFocus = false) {
+    for (const menu of this.elements.entries.querySelectorAll<HTMLDetailsElement>('.entry-actions[open]')) {
+      menu.open = false
+      if (restoreFocus) menu.querySelector<HTMLElement>('summary')?.focus()
     }
   }
 
@@ -227,21 +248,38 @@ export class DirectoryExplorer {
       item.append(entryMain)
 
       if (entry.path) {
-        const actions = document.createElement('span')
+        const actions = document.createElement('details')
         actions.className = 'entry-actions'
+        const toggle = document.createElement('summary')
+        toggle.textContent = 'Actions'
+        toggle.setAttribute('aria-label', `Actions for ${entry.name ?? entry.path}`)
+        toggle.addEventListener('click', (event) => {
+          if (actions.classList.contains('is-disabled')) {
+            event.preventDefault()
+            return
+          }
+          for (const menu of entries.querySelectorAll<HTMLDetailsElement>('.entry-actions[open]')) {
+            if (menu !== actions) menu.open = false
+          }
+        })
+        const menu = document.createElement('span')
+        menu.className = 'entry-actions-menu'
         if (entry.type !== 'Directory') {
-          actions.append(
+          menu.append(
             this.createAction(
               'Download',
               () => this.download(entry.path!, entry.name ?? 'download'),
+              undefined,
+              actions,
             ),
           )
         }
-        actions.append(
-          this.createAction('Move', () => this.move(entry.path!)),
-          this.createAction('Copy', () => this.copy(entry.path!)),
-          this.createAction('Delete', () => this.delete(entry.path!, entry.type === 'Directory'), 'danger'),
+        menu.append(
+          this.createAction('Move', () => this.move(entry.path!), undefined, actions),
+          this.createAction('Copy', () => this.copy(entry.path!), undefined, actions),
+          this.createAction('Delete', () => this.delete(entry.path!, entry.type === 'Directory'), 'danger', actions),
         )
+        actions.append(toggle, menu)
         item.append(actions)
       }
       entries.append(item)
@@ -258,12 +296,16 @@ export class DirectoryExplorer {
     label: string,
     action: () => void,
     variant?: 'danger',
+    menu?: HTMLDetailsElement,
   ) {
     const button = document.createElement('button')
     button.type = 'button'
     button.className = `entry-action${variant ? ` ${variant}` : ''}`
     button.textContent = label
-    button.addEventListener('click', action)
+    button.addEventListener('click', () => {
+      if (menu) menu.open = false
+      action()
+    })
     return button
   }
 }

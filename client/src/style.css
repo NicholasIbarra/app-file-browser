@@ -280,9 +280,57 @@ kbd {
 }
 
 .entry-actions {
-  display: flex;
+  position: relative;
   flex: 0 0 auto;
-  gap: 10px;
+}
+
+.entry-actions summary {
+  list-style: none;
+  color: var(--muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.entry-actions summary::-webkit-details-marker {
+  display: none;
+}
+
+.entry-actions summary::after {
+  content: ' ▾';
+}
+
+.entry-actions[open] summary::after {
+  content: ' ▴';
+}
+
+.entry-actions summary:hover {
+  text-decoration: underline;
+}
+
+.entry-actions summary:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: 3px;
+}
+
+.entry-actions.is-disabled summary {
+  cursor: wait;
+  opacity: 0.5;
+}
+
+.entry-actions-menu {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + 6px);
+  right: 0;
+  display: flex;
+  min-width: 112px;
+  flex-direction: column;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 16%);
 }
 
 #entries button {
@@ -304,8 +352,18 @@ kbd {
 }
 
 #entries .entry-action {
+  width: 100%;
+  padding: 7px 9px;
+  border-radius: 4px;
   color: var(--muted);
   font-size: 0.8rem;
+  text-align: left;
+}
+
+#entries .entry-action:hover,
+#entries .entry-action:focus-visible {
+  background: var(--background);
+  text-decoration: none;
 }
 
 #entries .entry-action.danger {
