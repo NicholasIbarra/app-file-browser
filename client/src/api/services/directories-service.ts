@@ -44,7 +44,9 @@ export async function uploadFile(
   overwrite = false,
 ): Promise<void> {
   const form = new FormData()
+  
   form.append('file', file)
+  
   await httpClient.post('/api/directories/upload', form, {
     params: { path, overwrite },
   })
@@ -54,6 +56,7 @@ export async function deleteEntry(
   path: string,
   recursive = false,
 ): Promise<void> {
+  
   await httpClient.delete('/api/directories', {
     params: { path, recursive },
   })

@@ -1,7 +1,6 @@
 export interface AppShell {
   entries: HTMLUListElement
   path: HTMLParagraphElement
-  // reIndexButton: HTMLButtonElement | undefined
   uploadButton: HTMLButtonElement
   uploadInput: HTMLInputElement
   searchButton: HTMLButtonElement
@@ -22,17 +21,23 @@ function getElement<T extends Element>(root: ParentNode, selector: string): T {
 export function renderAppShell(root: HTMLDivElement): AppShell {
   root.innerHTML = `
     <main class="explorer">
-      <header><h1>File Explorer</h1><div class="header-actions">
-        <button id="upload-button" type="button">Upload</button>
-        <input id="upload-input" class="visually-hidden" type="file" multiple />
-        <!-- <button id="re-index-button" type="button">Re-index</button> -->
-        <button id="search-button" type="button" aria-haspopup="dialog"><span>Search</span><kbd aria-hidden="true">⌘ K</kbd></button>
-        <button id="theme-toggle" type="button"></button>
-      </div></header>
+      <header>
+        <h1>File Explorer</h1>
+        
+        <div class="header-actions">
+          <button id="upload-button" type="button">Upload</button>
+          <input id="upload-input" class="visually-hidden" type="file" multiple />
+          <button id="search-button" type="button" aria-haspopup="dialog"><span>Search</span><kbd aria-hidden="true">⌘ K</kbd></button>
+          <button id="theme-toggle" type="button"></button>
+        </div>
+      </header>
+
       <p id="current-path" aria-live="polite"></p>
       <p id="status" role="status">Loading…</p>
       <ul id="entries" aria-label="Directory contents"></ul>
+    
     </main>
+    
     <div id="search-overlay" class="search-overlay" hidden>
       <section class="search-dialog" role="dialog" aria-modal="true" aria-labelledby="search-title">
         <h2 id="search-title" class="visually-hidden">Search files</h2>
@@ -47,13 +52,13 @@ export function renderAppShell(root: HTMLDivElement): AppShell {
     </div>`
 
   return {
-    entries: getElement(root, '#entries'), path: getElement(root, '#current-path'),
-    // reIndexButton: getElement(root, '#re-index-button'),
+    entries: getElement(root, '#entries'), 
+    path: getElement(root, '#current-path'),
     searchButton: getElement(root, '#search-button'),
     uploadButton: getElement(root, '#upload-button'), 
     uploadInput: getElement(root, '#upload-input'),
     searchInput: getElement(root, '#search-input'),
-     searchOverlay: getElement(root, '#search-overlay'),
+    searchOverlay: getElement(root, '#search-overlay'),
     searchResults: getElement(root, '#search-results'), 
     searchStatus: getElement(root, '#search-status'),
     status: getElement(root, '#status'), 

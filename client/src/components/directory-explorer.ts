@@ -17,7 +17,6 @@ export class DirectoryExplorer {
 
   constructor(elements: AppShell) {
     this.elements = elements
-    // elements.reIndexButton.addEventListener('click', () => void this.reIndex())
     elements.uploadButton.addEventListener('click', () => elements.uploadInput.click())
     elements.uploadInput.addEventListener('change', () => void this.uploadSelectedFiles())
 
@@ -32,13 +31,21 @@ export class DirectoryExplorer {
 
   async load(path?: string, urlMode: NavigationMode = 'none') {
     const { entries, status } = this.elements
+    
+    // Set loading state
     status.hidden = false
     status.textContent = 'Loading…'
     entries.hidden = true
+   
     try {
       const contents = await getDirectory(path)
       this.currentPath = contents.path || '/'
-      if (urlMode !== 'none') updateUrl(path, urlMode)
+      
+      if (urlMode !== 'none') {
+        // Push to browser stack for back button support
+        updateUrl(path, urlMode)
+      }
+      
       this.render(contents, path !== undefined)
       entries.hidden = false
     } catch (error) {
@@ -50,14 +57,19 @@ export class DirectoryExplorer {
   private async uploadSelectedFiles() {
     const { uploadButton, uploadInput } = this.elements
     const files = [...(uploadInput.files ?? [])]
-    if (files.length === 0) return
+    
+    if (files.length === 0) {
+      return
+    }
 
     uploadButton.disabled = true
     this.showStatus(`Uploading ${files.length === 1 ? files[0].name : `${files.length} files`}…`)
+    
     try {
       for (const file of files) {
         await uploadFile(this.joinPath(this.currentPath, file.name), file)
       }
+
       await this.load(this.currentPath)
     } catch (error) {
       this.showStatus('Unable to upload the selected file. It may already exist.')
@@ -70,7 +82,9 @@ export class DirectoryExplorer {
 
   private async move(path: string) {
     const destinationPath = window.prompt('Move to path:', path)
-    if (!destinationPath || destinationPath === path) return
+    if (!destinationPath || destinationPath === path) {
+      return
+    }
 
     await this.runOperation(
       'Moving…',
@@ -111,10 +125,13 @@ export class DirectoryExplorer {
       const content = await downloadFile(path)
       const url = URL.createObjectURL(content)
       const link = document.createElement('a')
+
       link.href = url
       link.download = fileName
       link.hidden = true
+      
       document.body.append(link)
+      
       link.click()
       link.remove()
       window.setTimeout(() => URL.revokeObjectURL(url), 0)
@@ -153,15 +170,21 @@ export class DirectoryExplorer {
   private setActionsDisabled(disabled: boolean) {
     for (const menu of this.elements.entries.querySelectorAll<HTMLDetailsElement>('.entry-actions')) {
       menu.classList.toggle('is-disabled', disabled)
+
       const toggle = menu.querySelector<HTMLElement>('summary')
       toggle?.setAttribute('aria-disabled', String(disabled))
-      if (disabled) menu.open = false
+      
+      if (disabled) {
+        menu.open = false
+      }
     }
+
     for (const button of this.elements.entries.querySelectorAll<HTMLButtonElement>('.entry-action')) {
       button.disabled = disabled
     }
   }
 
+  // Close the file upload window explorer
   private closeActionMenus(restoreFocus = false) {
     for (const menu of this.elements.entries.querySelectorAll<HTMLDetailsElement>('.entry-actions[open]')) {
       menu.open = false
@@ -173,72 +196,80 @@ export class DirectoryExplorer {
     return directory === '/' ? `/${name}` : `${directory.replace(/\/$/, '')}/${name}`
   }
 
-  // private async reIndex() {
-  //   const { reIndexButton, status } = this.elements
-  //   reIndexButton.disabled = true
-  //   reIndexButton.textContent = 'Re-indexing…'
-  //   status.hidden = false
-  //   status.textContent = 'Rebuilding the search index…'
-  //   try {
-  //     await reIndexDirectories()
-  //     await this.load(getUrlPath())
-  //   } catch (error) {
-  //     status.textContent = 'Unable to rebuild the search index.'
-  //     console.error(error)
-  //   } finally {
-  //     reIndexButton.disabled = false
-  //     reIndexButton.textContent = 'Re-index'
-  //   }
-  // }
-
   private renderPath(path?: string | null) {
     const target = this.elements.path
+
     target.replaceChildren()
+    
     if (!path) {
       target.textContent = 'Root'
       return
     }
+    
     const breadcrumbs = getPathBreadcrumbs(path)
+    
     breadcrumbs.forEach((breadcrumb, index) => {
-      if (index > 0 && breadcrumbs[index - 1].label !== '/') target.append(document.createTextNode(' / '))
+      if (index > 0 && breadcrumbs[index - 1].label !== '/') {
+        target.append(document.createTextNode(' / '))
+      }
+
       const link = document.createElement('a')
       const url = new URL(window.location.href)
+      
       url.searchParams.set('path', breadcrumb.path)
       link.href = url.toString()
       link.textContent = breadcrumb.label
+      
       link.addEventListener('click', (event) => {
-        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+          return
+        }
+
         event.preventDefault()
         void this.load(breadcrumb.path, 'push')
       })
+
       target.append(link)
     })
   }
 
   private render(contents: DirectoryContents, canGoUp: boolean) {
     const { entries, status } = this.elements
+    
     this.renderPath(contents.path)
     status.hidden = true
-    entries.replaceChildren()
+    
+    entries.replaceChildren();
+
+    // Render the ".." to go up in directory
     if (canGoUp && contents.path) {
-      const item = document.createElement('li')
       const button = document.createElement('button')
+      
       button.type = 'button'
       button.textContent = '..'
       button.addEventListener('click', () => void this.load(getParentPath(contents.path!), 'push'))
+      
+      const item = document.createElement('li')
+      
       item.append(button)
+      
       entries.append(item)
     }
+
     for (const entry of contents.entries ?? []) {
       const item = document.createElement('li')
       item.className = 'entry-row'
+
       const entryMain = document.createElement('span')
       entryMain.className = 'entry-main'
+      
       if (entry.type === 'Directory' && entry.path) {
         const button = document.createElement('button')
+      
         button.type = 'button'
         button.textContent = `${entry.name ?? entry.path}/`
         button.addEventListener('click', () => void this.load(entry.path!, 'push'))
+      
         entryMain.append(button)
 
         if (entry.childCount != null) {
@@ -247,6 +278,7 @@ export class DirectoryExplorer {
         }
       } else {
         const name = document.createElement('span')
+
         name.textContent = entry.name ?? entry.path ?? '(unnamed file)'
         entryMain.append(name)
 
@@ -254,12 +286,15 @@ export class DirectoryExplorer {
           entryMain.append(this.createEntryMetadata(formatFileSize(entry.size)))
         }
       }
+
       item.append(entryMain)
 
       if (entry.path) {
         const actions = document.createElement('details')
         actions.className = 'entry-actions'
+
         const toggle = document.createElement('summary')
+
         toggle.textContent = 'Actions'
         toggle.setAttribute('aria-label', `Actions for ${entry.name ?? entry.path}`)
         toggle.addEventListener('click', (event) => {
@@ -271,8 +306,10 @@ export class DirectoryExplorer {
             if (menu !== actions) menu.open = false
           }
         })
+
         const menu = document.createElement('span')
         menu.className = 'entry-actions-menu'
+        
         if (entry.type !== 'Directory') {
           menu.append(
             this.createAction(
@@ -293,18 +330,24 @@ export class DirectoryExplorer {
       }
       entries.append(item)
     }
+
+    // Empty state
     if ((contents.entries?.length ?? 0) === 0) {
-      const item = document.createElement('li')
+      const item = document.createElement('li');
+
       item.className = 'empty'
       item.textContent = 'This folder is empty.'
+      
       entries.append(item)
     }
   }
 
   private createEntryMetadata(text: string) {
     const metadata = document.createElement('span')
+    
     metadata.className = 'entry-metadata'
     metadata.textContent = text
+    
     return metadata
   }
 
@@ -315,13 +358,16 @@ export class DirectoryExplorer {
     menu?: HTMLDetailsElement,
   ) {
     const button = document.createElement('button')
+
     button.type = 'button'
     button.className = `entry-action${variant ? ` ${variant}` : ''}`
     button.textContent = label
+
     button.addEventListener('click', () => {
       if (menu) menu.open = false
       action()
     })
+
     return button
   }
 }

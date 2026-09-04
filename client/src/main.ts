@@ -6,13 +6,23 @@ import { getUrlPath } from './utils/navigation'
 import { initializeThemeToggle } from './utils/theme'
 
 const root = document.querySelector<HTMLDivElement>('#app')
-if (!root) throw new Error('App root is missing')
 
-const elements = renderAppShell(root)
-const explorer = new DirectoryExplorer(elements)
+if (!root) {
+    throw new Error('App root is missing')
+}
 
-initializeThemeToggle(elements.themeToggle)
-new SearchDialog(elements, (path) => void explorer.load(path, 'push'))
+const appShell = renderAppShell(root)
+const explorer = new DirectoryExplorer(appShell)
 
-window.addEventListener('popstate', () => void explorer.load(getUrlPath()))
+initializeThemeToggle(appShell.themeToggle)
+
+new SearchDialog(
+    appShell, 
+    (path) => void explorer.load(path, 'push'));
+
+// Handle the back button
+window.addEventListener(
+    'popstate', 
+    () => void explorer.load(getUrlPath()))
+
 void explorer.load(getUrlPath())
