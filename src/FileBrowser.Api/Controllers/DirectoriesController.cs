@@ -46,7 +46,7 @@ public class DirectoriesController : ControllerBase
     public async Task<IActionResult> UploadAsync(
         [FromQuery] string path,
         [FromQuery] bool overwrite,
-        [FromForm] IFormFile file,
+        IFormFile file,
         CancellationToken cancellationToken)
     {
         await using var content = file.OpenReadStream();
