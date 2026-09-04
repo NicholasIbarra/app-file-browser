@@ -9,9 +9,11 @@ type SearchResult =
 export async function searchFiles(
   query: NonNullable<SearchQuery['query']>,
   limit?: SearchQuery['limit'],
+  signal?: AbortSignal,
 ): Promise<SearchResult[]> {
   const response = await httpClient.get<SearchResult[]>('/api/search', {
     params: limit === undefined ? { query } : { query, limit },
+    signal,
   })
 
   return response.data
