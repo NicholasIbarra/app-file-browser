@@ -116,6 +116,78 @@ public sealed class LocalFileSystemTests : IDisposable
     }
 
     [Fact]
+    public async Task UploadAsync_WritesContent_AndHonorsOverwrite()
+    {
+        await using var content = new MemoryStream("hello"u8.ToArray());
+        await _sut.UploadAsync("/notes.txt", content);
+
+        Assert.Equal("hello", await File.ReadAllTextAsync(Path.Combine(_root, "notes.txt")));
+
+        await using var replacement = new MemoryStream("updated"u8.ToArray());
+        await _sut.UploadAsync("/notes.txt", replacement, overwrite: true);
+
+        Assert.Equal("updated", await File.ReadAllTextAsync(Path.Combine(_root, "notes.txt")));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_DeletesFilesAndDirectories()
+    {
+        await File.WriteAllTextAsync(Path.Combine(_root, "notes.txt"), "hello");
+        var directory = Directory.CreateDirectory(Path.Combine(_root, "Documents"));
+        await File.WriteAllTextAsync(Path.Combine(directory.FullName, "nested.txt"), "nested");
+
+        await _sut.DeleteAsync("/notes.txt");
+        await _sut.DeleteAsync("/Documents", recursive: true);
+
+        Assert.False(File.Exists(Path.Combine(_root, "notes.txt")));
+        Assert.False(Directory.Exists(directory.FullName));
+    }
+
+    [Fact]
+    public async Task MoveAsync_MovesFilesAndDirectories()
+    {
+        await File.WriteAllTextAsync(Path.Combine(_root, "notes.txt"), "hello");
+        Directory.CreateDirectory(Path.Combine(_root, "Documents"));
+
+        await _sut.MoveAsync("/notes.txt", "/renamed.txt");
+        await _sut.MoveAsync("/Documents", "/Archive");
+
+        Assert.Equal("hello", await File.ReadAllTextAsync(Path.Combine(_root, "renamed.txt")));
+        Assert.True(Directory.Exists(Path.Combine(_root, "Archive")));
+    }
+
+    [Fact]
+    public async Task CopyAsync_CopiesFilesAndDirectoryTrees()
+    {
+        await File.WriteAllTextAsync(Path.Combine(_root, "notes.txt"), "hello");
+        var directory = Directory.CreateDirectory(Path.Combine(_root, "Documents", "Nested"));
+        await File.WriteAllTextAsync(Path.Combine(directory.FullName, "file.txt"), "nested");
+
+        await _sut.CopyAsync("/notes.txt", "/notes-copy.txt");
+        await _sut.CopyAsync("/Documents", "/Documents-copy");
+
+        Assert.Equal("hello", await File.ReadAllTextAsync(Path.Combine(_root, "notes-copy.txt")));
+        Assert.Equal(
+            "nested",
+            await File.ReadAllTextAsync(Path.Combine(_root, "Documents-copy", "Nested", "file.txt")));
+    }
+
+    [Fact]
+    public async Task MutatingOperations_RejectPathTraversal()
+    {
+        await using var content = new MemoryStream("hello"u8.ToArray());
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => _sut.UploadAsync("../../outside.txt", content));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => _sut.DeleteAsync("../../outside.txt"));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => _sut.MoveAsync("/source", "../../outside"));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => _sut.CopyAsync("/source", "../../outside"));
+    }
+
+    [Fact]
     public async Task Operations_RejectPathTraversal()
     {
         await Assert.ThrowsAsync<UnauthorizedAccessException>(
