@@ -6,8 +6,10 @@ using FileBrowser.Application.Search;
 using FileBrowser.Infrastructure.BackgroundServices;
 using FileBrowser.Infrastructure.FileSystem;
 using FileBrowser.Infrastructure.Indexing;
+using Azure.Storage.Blobs;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace FileBrowser.Infrastructure;
 
@@ -24,8 +26,11 @@ public static class DependencyInjection
 
         services.AddScoped<IDirectoryBrowserService, DirectoryBrowserService>();
         services.AddScoped<IFileSearchService, FileSearchService>();
+        
         services.AddSingleton<IFileSearchIndex, FileSearchIndex>();
         services.AddSingleton<IFileSearchScorer, FileSearchScorer>();
+        services.AddSingleton<IFileSystemPathResolver, FileSystemPathResolver>();
+
         services.AddHostedService<FileIndexHostedService>();
 
         services.AddMediatR(configuration =>
@@ -34,7 +39,7 @@ public static class DependencyInjection
         var options = new FileBrowserOptions();
         configuration.GetSection(FileBrowserOptions.SectionName).Bind(options);
 
-        if (!Path.IsPathRooted(options.HomeDirectory))
+        if (options.Provider == FileSystemProvider.Local && !Path.IsPathRooted(options.HomeDirectory))
         {
             options.HomeDirectory = Path.GetFullPath(
                 Path.Combine(contentRootPath, options.HomeDirectory));
@@ -48,7 +53,7 @@ public static class DependencyInjection
             Directory.CreateDirectory(options.HomeDirectory);
         }
 
-        services.AddSingleton<IFileSystemPathResolver, FileSystemPathResolver>();
+        services.AddSingleton(Options.Create(options));
 
         switch (options.Provider)
         {
@@ -57,9 +62,10 @@ public static class DependencyInjection
                 break;
 
             case FileSystemProvider.Azure:
-                throw new NotSupportedException(
-                    "The Azure file system provider is not implemented yet. " +
-                    "Set \"FileBrowser:Provider\" to \"Local\" in configuration.");
+                ValidateAzureOptions(options.Azure);
+                services.AddSingleton(CreateBlobContainerClient(options.Azure));
+                services.AddSingleton<IFileSystem, AzureFileSystem>();
+                break;
 
             default:
                 throw new NotSupportedException(
@@ -67,5 +73,25 @@ public static class DependencyInjection
         }
 
         return services;
+    }
+
+    private static BlobContainerClient CreateBlobContainerClient(AzureFileSystemOptions options)
+    {
+        return new BlobContainerClient(options.ConnectionString, options.ContainerName);
+    }
+
+    private static void ValidateAzureOptions(AzureFileSystemOptions options)
+    {
+        if (string.IsNullOrWhiteSpace(options.ContainerName))
+        {
+            throw new InvalidOperationException(
+                "FileBrowser:Azure:ContainerName is required for the Azure provider.");
+        }
+
+        if (string.IsNullOrWhiteSpace(options.ConnectionString))
+        {
+            throw new InvalidOperationException(
+                "FileBrowser:Azure:ConnectionString is required for the Azure provider.");
+        }
     }
 }

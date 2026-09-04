@@ -1,5 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
+  <PropertyGroup>
+    <UserSecretsId>8cb15bf7-4e10-45ce-a07b-ed21b36706c6</UserSecretsId>
+  </PropertyGroup>
+
   <ItemGroup>
     <Compile Remove="local-storage\**" />
     <Content Remove="local-storage\**" />

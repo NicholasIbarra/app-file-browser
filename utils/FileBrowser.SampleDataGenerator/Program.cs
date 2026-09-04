@@ -1,4 +1,5 @@
-using System.Text.Json;
+using System.Reflection;
+using Microsoft.Extensions.Configuration;
 
 const string settingsFileName = "appsettings.json";
 
@@ -10,14 +11,19 @@ try
         throw new FileNotFoundException($"Could not find {settingsFileName} at '{settingsPath}'.");
     }
 
-    var json = await File.ReadAllTextAsync(settingsPath);
-    var appSettings = JsonSerializer.Deserialize<AppSettings>(json, new JsonSerializerOptions
-    {
-        PropertyNameCaseInsensitive = true
-    }) ?? throw new InvalidOperationException($"{settingsFileName} is empty or invalid.");
+    var configuration = new ConfigurationBuilder()
+        .SetBasePath(AppContext.BaseDirectory)
+        .AddJsonFile(settingsFileName, optional: false)
+        .AddUserSecrets(Assembly.GetExecutingAssembly(), optional: true)
+        .Build();
 
-    appSettings.SampleData.Validate();
-    await new SampleDataGenerator(appSettings.SampleData).GenerateAsync();
+    var sampleData = configuration
+        .GetRequiredSection("SampleData")
+        .Get<SampleDataOptions>()
+        ?? throw new InvalidOperationException($"{settingsFileName} is empty or invalid.");
+
+    sampleData.Validate();
+    await new SampleDataGenerator(sampleData).GenerateAsync();
 }
 catch (Exception exception)
 {

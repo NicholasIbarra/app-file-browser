@@ -8,30 +8,25 @@ internal sealed class SampleDataGenerator(SampleDataOptions options)
 
     public async Task GenerateAsync()
     {
-        var outputPath = ResolveOutputPath(options.OutputPath);
-        Directory.CreateDirectory(outputPath);
+        var destination = SampleDataDestination.Create(options);
+        await destination.InitializeAsync();
 
         Console.WriteLine($"Generating {options.TotalFiles:N0} text files in {options.TotalFolders:N0} folders...");
-        Console.WriteLine($"Output: {outputPath}");
+        Console.WriteLine($"Provider: {options.Provider}");
+        Console.WriteLine($"Output: {destination.Description}");
 
-        var folders = CreateFolders(outputPath);
+        var folders = await CreateFoldersAsync(destination);
         var fileCounts = AllocateFiles(folders.Count);
         var createdFiles = 0;
 
         for (var folderIndex = 0; folderIndex < folders.Count; folderIndex++)
         {
-            var usedNames = Directory
-                .EnumerateFiles(folders[folderIndex].Path)
-                .Select(Path.GetFileName)
-                .OfType<string>()
+            var usedNames = (await destination.GetEntryNamesAsync(folders[folderIndex].Path))
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
             for (var fileIndex = 0; fileIndex < fileCounts[folderIndex]; fileIndex++)
             {
                 var fileName = UniqueName(usedNames, CreateFileName, ".txt");
-                await File.WriteAllTextAsync(
-                    Path.Combine(folders[folderIndex].Path, fileName),
-                    CreateFileContent(),
-                    Encoding.UTF8);
+                await destination.WriteTextAsync(CombinePath(folders[folderIndex].Path, fileName), CreateFileContent());
                 createdFiles++;
             }
 
@@ -45,65 +40,44 @@ internal sealed class SampleDataGenerator(SampleDataOptions options)
         Console.WriteLine("Sample data generation complete.");
     }
 
-    private static string ResolveOutputPath(string configuredPath)
-    {
-        if (Path.IsPathFullyQualified(configuredPath))
-        {
-            return Path.GetFullPath(configuredPath);
-        }
-
-        for (var directory = new DirectoryInfo(Directory.GetCurrentDirectory()); directory is not null; directory = directory.Parent)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "FileBrowser.slnx")))
-            {
-                return Path.GetFullPath(configuredPath, directory.FullName);
-            }
-        }
-
-        return Path.GetFullPath(configuredPath, Directory.GetCurrentDirectory());
-    }
-
-    private List<GeneratedFolder> CreateFolders(string rootPath)
+    private async Task<List<GeneratedFolder>> CreateFoldersAsync(ISampleDataDestination destination)
     {
         var folders = new List<GeneratedFolder>(options.TotalFolders);
         var namesByParent = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-        var parent = new GeneratedFolder(rootPath, 0);
+        var parent = new GeneratedFolder(string.Empty, 0);
 
         // Establish a chain so the configured minimum recursion depth is always reached.
         for (var depth = 1; depth <= options.MinFolderDepth; depth++)
         {
-            parent = CreateFolder(parent, namesByParent);
+            parent = await CreateFolderAsync(parent, namesByParent, destination);
             folders.Add(parent);
         }
 
         while (folders.Count < options.TotalFolders)
         {
             var possibleParents = folders.Where(folder => folder.Depth < options.MaxFolderDepth).ToList();
-            possibleParents.Add(new GeneratedFolder(rootPath, 0));
+            possibleParents.Add(new GeneratedFolder(string.Empty, 0));
             parent = possibleParents[_random.Next(possibleParents.Count)];
-            folders.Add(CreateFolder(parent, namesByParent));
+            folders.Add(await CreateFolderAsync(parent, namesByParent, destination));
         }
 
         return folders;
     }
 
-    private GeneratedFolder CreateFolder(
+    private async Task<GeneratedFolder> CreateFolderAsync(
         GeneratedFolder parent,
-        Dictionary<string, HashSet<string>> namesByParent)
+        Dictionary<string, HashSet<string>> namesByParent,
+        ISampleDataDestination destination)
     {
         if (!namesByParent.TryGetValue(parent.Path, out var usedNames))
         {
-            usedNames = Directory
-                .EnumerateDirectories(parent.Path)
-                .Select(Path.GetFileName)
-                .OfType<string>()
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            usedNames = (await destination.GetEntryNamesAsync(parent.Path)).ToHashSet(StringComparer.OrdinalIgnoreCase);
             namesByParent[parent.Path] = usedNames;
         }
 
         var folderName = UniqueName(usedNames, CreateFolderName);
-        var folder = new GeneratedFolder(Path.Combine(parent.Path, folderName), parent.Depth + 1);
-        Directory.CreateDirectory(folder.Path);
+        var folder = new GeneratedFolder(CombinePath(parent.Path, folderName), parent.Depth + 1);
+        await destination.CreateFolderAsync(folder.Path);
         return folder;
     }
 
@@ -199,6 +173,9 @@ internal sealed class SampleDataGenerator(SampleDataOptions options)
 
         return string.IsNullOrWhiteSpace(sanitized) ? "item" : sanitized;
     }
+
+    private static string CombinePath(string parent, string name) =>
+        string.IsNullOrEmpty(parent) ? name : $"{parent}/{name}";
 
     private sealed record GeneratedFolder(string Path, int Depth);
 }
