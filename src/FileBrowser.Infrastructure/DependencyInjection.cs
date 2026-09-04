@@ -37,10 +37,24 @@ public static class DependencyInjection
         services.AddSingleton(Options.Create(options));
 
         services.AddSingleton<IFileSystemPathResolver, FileSystemPathResolver>();
-        services.AddSingleton<LocalFileSystem>();
-        services.AddSingleton<IFileSystemFactory, FileSystemFactory>();
-        services.AddSingleton<IFileSystem>(
-            sp => sp.GetRequiredService<IFileSystemFactory>().Create());
+
+        switch (options.Provider)
+        {
+            case FileSystemProvider.Local:
+                services.AddSingleton<IFileSystem, LocalFileSystem>();
+                break;
+
+            // TODO: register an Azure Blob Storage backed IFileSystem
+            // implementation here once one exists.
+            case FileSystemProvider.Azure:
+                throw new NotSupportedException(
+                    "The Azure file system provider is not implemented yet. " +
+                    "Set \"FileBrowser:Provider\" to \"Local\" in configuration.");
+
+            default:
+                throw new NotSupportedException(
+                    $"Unknown file system provider '{options.Provider}'.");
+        }
 
         return services;
     }
