@@ -1,6 +1,7 @@
 import './style.css'
 import {
   getDirectory,
+  reIndexDirectories,
   searchFiles,
   type DirectoryContents,
   type SearchResult,
@@ -21,6 +22,7 @@ app.innerHTML = `
     <header>
       <h1>File Explorer</h1>
       <div class="header-actions">
+        <button id="re-index-button" type="button">Re-index</button>
         <button id="search-button" type="button" aria-haspopup="dialog">
           <span>Search</span>
           <kbd aria-hidden="true">⌘ K</kbd>
@@ -65,6 +67,7 @@ const pathElement = document.querySelector<HTMLParagraphElement>('#current-path'
 const statusElement = document.querySelector<HTMLParagraphElement>('#status')!
 const entriesElement = document.querySelector<HTMLUListElement>('#entries')!
 const themeToggle = document.querySelector<HTMLButtonElement>('#theme-toggle')!
+const reIndexButton = document.querySelector<HTMLButtonElement>('#re-index-button')!
 const searchButton = document.querySelector<HTMLButtonElement>('#search-button')!
 const searchOverlay = document.querySelector<HTMLDivElement>('#search-overlay')!
 const searchInput = document.querySelector<HTMLInputElement>('#search-input')!
@@ -74,6 +77,28 @@ const searchResults = document.querySelector<HTMLUListElement>('#search-results'
 let searchRequest: AbortController | undefined
 
 initializeThemeToggle(themeToggle)
+
+async function reIndex() {
+  reIndexButton.disabled = true
+  reIndexButton.textContent = 'Re-indexing…'
+  statusElement.hidden = false
+  statusElement.textContent = 'Rebuilding the search index…'
+
+  try {
+    await reIndexDirectories()
+    await loadDirectory(getUrlPath())
+  } catch (error) {
+    statusElement.textContent = 'Unable to rebuild the search index.'
+    console.error(error)
+  } finally {
+    reIndexButton.disabled = false
+    reIndexButton.textContent = 'Re-index'
+  }
+}
+
+reIndexButton.addEventListener('click', () => {
+  void reIndex()
+})
 
 function openSearch() {
   searchOverlay.hidden = false

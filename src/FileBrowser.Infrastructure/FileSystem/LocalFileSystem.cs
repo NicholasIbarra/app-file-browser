@@ -1,7 +1,4 @@
 ﻿using FileBrowser.Application.Abtractstions.FileSystem;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace FileBrowser.Infrastructure.FileSystem;
 
@@ -14,6 +11,12 @@ public class LocalFileSystem : IFileSystem
         _pathResolver = pathResolver;
     }
 
+    /// <summary>
+    /// Gets the contents of a directory.
+    /// </summary>
+    /// <param name="path">The path of the directory.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the directory contents.</returns>
     public Task<DirectoryContents> GetDirectoryContentsAsync(
         string path,
         CancellationToken cancellationToken = default)
@@ -43,6 +46,12 @@ public class LocalFileSystem : IFileSystem
         return Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Gets a file or directory entry by its path.
+    /// </summary>
+    /// <param name="path">The path of the file or directory.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the file or directory entry, or null if not found.</returns>
     public Task<FileItem?> GetFileAsync(
         string path,
         CancellationToken cancellationToken = default)

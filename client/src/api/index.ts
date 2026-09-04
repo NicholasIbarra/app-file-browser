@@ -1,4 +1,4 @@
-export { getDirectory } from './services/directories-service.ts'
+export { getDirectory, reIndexDirectories } from './services/directories-service.ts'
 export type { DirectoryContents } from './services/directories-service.ts'
 export { searchFiles } from './services/search-service.ts'
 export type { SearchResult } from './services/search-service.ts'

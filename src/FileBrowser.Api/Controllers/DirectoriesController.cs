@@ -1,4 +1,5 @@
-﻿using FileBrowser.Application.Browsing;
+﻿using FileBrowser.Application.Abtractstions.Indexing;
+using FileBrowser.Application.Browsing;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FileBrowser.Api.Controllers;
@@ -8,10 +9,14 @@ namespace FileBrowser.Api.Controllers;
 public class DirectoriesController : ControllerBase
 {
     private readonly IDirectoryBrowserService _directoryBrowserService;
+    private readonly IFileSearchIndex _fileSearchIndex;
 
-    public DirectoriesController(IDirectoryBrowserService directoryBrowserService)
+    public DirectoriesController(
+        IDirectoryBrowserService directoryBrowserService,
+        IFileSearchIndex fileSearchIndex)
     {
         _directoryBrowserService = directoryBrowserService;
+        _fileSearchIndex = fileSearchIndex;
     }
 
     [HttpGet]
@@ -24,5 +29,14 @@ public class DirectoriesController : ControllerBase
             cancellationToken);
 
         return Ok(result);
+    }
+
+    [HttpPost("re-index")]
+    public async Task<IActionResult> ReIndexAsync(
+        CancellationToken cancellationToken)
+    {
+        await _fileSearchIndex.RebuildAsync(cancellationToken);
+
+        return NoContent();
     }
 }

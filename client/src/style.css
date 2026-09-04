@@ -59,7 +59,8 @@ h1 {
 }
 
 #theme-toggle,
-#search-button {
+#search-button,
+#re-index-button {
   padding: 6px 10px;
   border: 1px solid var(--border);
   border-radius: 5px;
@@ -67,6 +68,11 @@ h1 {
   background: var(--background);
   font: inherit;
   cursor: pointer;
+}
+
+#re-index-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 #search-button {

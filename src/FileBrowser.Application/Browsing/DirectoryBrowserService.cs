@@ -1,7 +1,4 @@
 ﻿using FileBrowser.Application.Abtractstions.FileSystem;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace FileBrowser.Application.Browsing;
 
@@ -21,7 +18,7 @@ public class DirectoryBrowserService : IDirectoryBrowserService
         var requestedPath = NormalizePath(path);
 
         var contents = await _fileSystem.GetDirectoryContentsAsync(
-            requestedPath, 
+            requestedPath,
             cancellationToken);
 
         var entries = contents.Entries
