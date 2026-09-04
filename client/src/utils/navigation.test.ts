@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
 
 import { beforeEach, describe, expect, it } from 'vitest'
-import { getParentPath, getUrlPath, updateUrl } from './navigation'
+import {
+  getParentPath,
+  getPathBreadcrumbs,
+  getUrlPath,
+  updateUrl,
+} from './navigation'
 
 describe('navigation', () => {
   beforeEach(() => {
@@ -45,4 +50,21 @@ describe('navigation', () => {
       expect(getParentPath(path)).toBeUndefined()
     },
   )
+
+  it('builds links for each segment of a Unix path', () => {
+    expect(getPathBreadcrumbs('/obj/Debug/net10.0')).toEqual([
+      { label: '/', path: '/' },
+      { label: 'obj', path: '/obj' },
+      { label: 'Debug', path: '/obj/Debug' },
+      { label: 'net10.0', path: '/obj/Debug/net10.0' },
+    ])
+  })
+
+  it('builds links for each segment of a Windows path', () => {
+    expect(getPathBreadcrumbs('C:\\Projects\\app')).toEqual([
+      { label: 'C:', path: 'C:\\' },
+      { label: 'Projects', path: 'C:\\Projects' },
+      { label: 'app', path: 'C:\\Projects\\app' },
+    ])
+  })
 })

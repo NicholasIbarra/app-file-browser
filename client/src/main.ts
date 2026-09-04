@@ -2,6 +2,7 @@ import './style.css'
 import { getDirectory, type DirectoryContents } from './api'
 import {
   getParentPath,
+  getPathBreadcrumbs,
   getUrlPath,
   updateUrl,
   type NavigationMode,
@@ -29,8 +30,46 @@ const themeToggle = document.querySelector<HTMLButtonElement>('#theme-toggle')!
 
 initializeThemeToggle(themeToggle)
 
+function renderPath(path?: string | null) {
+  pathElement.replaceChildren()
+
+  if (!path) {
+    pathElement.textContent = 'Root'
+    return
+  }
+
+  const breadcrumbs = getPathBreadcrumbs(path)
+
+  breadcrumbs.forEach((breadcrumb, index) => {
+    if (index > 0 && breadcrumbs[index - 1].label !== '/') {
+      pathElement.append(document.createTextNode(' / '))
+    }
+
+    const link = document.createElement('a')
+    const url = new URL(window.location.href)
+    url.searchParams.set('path', breadcrumb.path)
+    link.href = url.toString()
+    link.textContent = breadcrumb.label
+    link.addEventListener('click', (event) => {
+      if (
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return
+      }
+
+      event.preventDefault()
+      void loadDirectory(breadcrumb.path, 'push')
+    })
+    pathElement.append(link)
+  })
+}
+
 function render(contents: DirectoryContents, canGoUp: boolean) {
-  pathElement.textContent = contents.path || 'Root'
+  renderPath(contents.path)
   statusElement.hidden = true
   entriesElement.replaceChildren()
 

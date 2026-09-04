@@ -1,5 +1,10 @@
 export type NavigationMode = 'push' | 'replace' | 'none'
 
+export interface PathBreadcrumb {
+  label: string
+  path: string
+}
+
 export function getUrlPath(): string | undefined {
   return new URL(window.location.href).searchParams.get('path') ?? undefined
 }
@@ -38,4 +43,23 @@ export function getParentPath(path: string): string | undefined {
   }
 
   return trimmed.slice(0, separatorIndex)
+}
+
+export function getPathBreadcrumbs(path: string): PathBreadcrumb[] {
+  const breadcrumbs: PathBreadcrumb[] = []
+  const isAbsoluteUnixPath = path.startsWith('/') && !path.startsWith('//')
+
+  if (isAbsoluteUnixPath) breadcrumbs.push({ label: '/', path: '/' })
+
+  for (const match of path.matchAll(/[^\\/]+/g)) {
+    const label = match[0]
+    let end = (match.index ?? 0) + label.length
+
+    // Keep the separator on Windows drive roots so "C:" links to "C:\\".
+    if (/^[A-Za-z]:$/.test(label) && /[\\/]/.test(path[end] ?? '')) end += 1
+
+    breadcrumbs.push({ label, path: path.slice(0, end) })
+  }
+
+  return breadcrumbs
 }

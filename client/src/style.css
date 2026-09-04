@@ -69,6 +69,15 @@ h1 {
   overflow-wrap: anywhere;
 }
 
+#current-path a {
+  color: var(--link);
+  text-decoration: none;
+}
+
+#current-path a:hover {
+  text-decoration: underline;
+}
+
 #entries {
   margin: 0;
   padding-left: 24px;
