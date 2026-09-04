@@ -27,7 +27,7 @@ public class LocalFileSystem : IFileSystem
 
         var directory = new DirectoryInfo(physicalPath);
 
-        var entries = new List<FileSystemEntry>();
+        var entries = new List<FileItem>();
 
         foreach (var entry in directory.EnumerateFileSystemInfos())
         {
@@ -43,7 +43,7 @@ public class LocalFileSystem : IFileSystem
         return Task.FromResult(result);
     }
 
-    public Task<FileSystemEntry?> GetEntryAsync(
+    public Task<FileItem?> GetFileAsync(
         string path,
         CancellationToken cancellationToken = default)
     {
@@ -107,18 +107,18 @@ public class LocalFileSystem : IFileSystem
             Directory.Exists(physicalPath));
     }
 
-    private FileSystemEntry Map(FileSystemInfo entry)
+    private FileItem Map(FileSystemInfo entry)
     {
         return entry switch
         {
-            FileInfo file => new FileSystemEntry(
+            FileInfo file => new FileItem(
                 Name: file.Name,
                 Path: _pathResolver.ToRelativePath(file.FullName),
                 Type: FileSystemEntryType.File,
                 Size: file.Length,
                 LastModified: file.LastWriteTimeUtc),
 
-            DirectoryInfo directory => new FileSystemEntry(
+            DirectoryInfo directory => new FileItem(
                 Name: directory.Name,
                 Path: _pathResolver.ToRelativePath(directory.FullName),
                 Type: FileSystemEntryType.Directory,

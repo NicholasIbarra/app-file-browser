@@ -56,7 +56,7 @@ public sealed class LocalFileSystemTests : IDisposable
         var filePath = Path.Combine(_root, "notes.txt");
         await File.WriteAllTextAsync(filePath, "hello");
 
-        var result = await _sut.GetEntryAsync("/notes.txt");
+        var result = await _sut.GetFileAsync("/notes.txt");
 
         Assert.NotNull(result);
         Assert.Equal("notes.txt", result.Name);
@@ -68,7 +68,7 @@ public sealed class LocalFileSystemTests : IDisposable
     [Fact]
     public async Task GetEntryAsync_ReturnsNull_WhenEntryDoesNotExist()
     {
-        var result = await _sut.GetEntryAsync("/missing.txt");
+        var result = await _sut.GetFileAsync("/missing.txt");
 
         Assert.Null(result);
     }

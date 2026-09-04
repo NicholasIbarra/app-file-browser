@@ -47,7 +47,8 @@ public class DirectoryBrowserService : IDirectoryBrowserService
 
         return path;
     }
-    private static FileSystemEntryDto Map(FileSystemEntry entry)
+
+    private static FileSystemEntryDto Map(FileItem entry)
     {
         return new FileSystemEntryDto(
             entry.Name,

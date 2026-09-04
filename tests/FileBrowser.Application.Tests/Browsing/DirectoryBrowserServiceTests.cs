@@ -82,9 +82,9 @@ public sealed class DirectoryBrowserServiceTests
     {
         var lastModified = DateTimeOffset.UtcNow;
 
-        var file = new FileSystemEntry(
+        var file = new FileItem(
             "afile.txt", "/afile.txt", FileSystemEntryType.File, 10, lastModified);
-        var directory = new FileSystemEntry(
+        var directory = new FileItem(
             "zdirectory", "/zdirectory", FileSystemEntryType.Directory, null, lastModified);
 
         _fileSystem
@@ -103,9 +103,9 @@ public sealed class DirectoryBrowserServiceTests
     {
         var lastModified = DateTimeOffset.UtcNow;
 
-        var beta = new FileSystemEntry(
+        var beta = new FileItem(
             "beta", "/beta", FileSystemEntryType.Directory, null, lastModified);
-        var alpha = new FileSystemEntry(
+        var alpha = new FileItem(
             "Alpha", "/Alpha", FileSystemEntryType.Directory, null, lastModified);
 
         _fileSystem
@@ -123,7 +123,7 @@ public sealed class DirectoryBrowserServiceTests
     public async Task GetDirectoryContentsAsync_MapsEntryFieldsToDto()
     {
         var lastModified = DateTimeOffset.UtcNow;
-        var entry = new FileSystemEntry(
+        var entry = new FileItem(
             "report.pdf", "/Documents/report.pdf", FileSystemEntryType.File, 2048, lastModified);
 
         _fileSystem

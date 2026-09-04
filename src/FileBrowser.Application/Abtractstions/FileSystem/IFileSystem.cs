@@ -6,7 +6,7 @@ public interface IFileSystem
         string path,
         CancellationToken cancellationToken = default);
 
-    Task<FileSystemEntry?> GetEntryAsync(
+    Task<FileItem?> GetFileAsync(
         string path,
         CancellationToken cancellationToken = default);
 

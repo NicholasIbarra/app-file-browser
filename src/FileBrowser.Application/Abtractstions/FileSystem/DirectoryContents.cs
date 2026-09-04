@@ -2,4 +2,4 @@
 
 public sealed record DirectoryContents(
     string Path,
-    IReadOnlyList<FileSystemEntry> Entries);
+    IReadOnlyList<FileItem> Entries);

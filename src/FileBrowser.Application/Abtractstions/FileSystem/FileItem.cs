@@ -1,6 +1,6 @@
 ﻿namespace FileBrowser.Application.Abtractstions.FileSystem;
 
-public sealed record FileSystemEntry(
+public sealed record FileItem(
     string Name,
     string Path,
     FileSystemEntryType Type,
