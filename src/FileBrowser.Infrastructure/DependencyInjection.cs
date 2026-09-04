@@ -1,4 +1,5 @@
 using FileBrowser.Application.Abtractstions.FileSystem;
+using FileBrowser.Application.Browsing;
 using FileBrowser.Infrastructure.FileSystem;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,6 +18,8 @@ public static class DependencyInjection
         ArgumentNullException.ThrowIfNull(configuration);
         ArgumentNullException.ThrowIfNull(contentRootPath);
 
+        services.AddScoped<IDirectoryBrowserService, DirectoryBrowserService>();
+
         var options = new FileBrowserOptions();
         configuration.GetSection(FileBrowserOptions.SectionName).Bind(options);
 
@@ -34,8 +37,6 @@ public static class DependencyInjection
             Directory.CreateDirectory(options.HomeDirectory);
         }
 
-        services.AddSingleton(Options.Create(options));
-
         services.AddSingleton<IFileSystemPathResolver, FileSystemPathResolver>();
 
         switch (options.Provider)
@@ -44,8 +45,6 @@ public static class DependencyInjection
                 services.AddSingleton<IFileSystem, LocalFileSystem>();
                 break;
 
-            // TODO: register an Azure Blob Storage backed IFileSystem
-            // implementation here once one exists.
             case FileSystemProvider.Azure:
                 throw new NotSupportedException(
                     "The Azure file system provider is not implemented yet. " +
