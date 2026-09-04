@@ -60,7 +60,8 @@ h1 {
 
 #theme-toggle,
 #search-button,
-#re-index-button {
+#re-index-button,
+#upload-button {
   padding: 6px 10px;
   border: 1px solid var(--border);
   border-radius: 5px;
@@ -70,7 +71,8 @@ h1 {
   cursor: pointer;
 }
 
-#re-index-button:disabled {
+#re-index-button:disabled,
+#upload-button:disabled {
   cursor: wait;
   opacity: 0.65;
 }
@@ -265,6 +267,24 @@ kbd {
   padding: 5px 0;
 }
 
+#entries .entry-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.entry-main {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.entry-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 10px;
+}
+
 #entries button {
   padding: 0;
   border: 0;
@@ -281,6 +301,39 @@ kbd {
 #entries button:focus-visible {
   outline: 2px solid var(--link);
   outline-offset: 3px;
+}
+
+#entries .entry-action {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+#entries .entry-action.danger {
+  color: #b3261e;
+}
+
+#entries .entry-action:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+
+@media (max-width: 620px) {
+  #app {
+    padding: 20px 12px;
+  }
+
+  .explorer {
+    padding: 20px;
+  }
+
+  header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .header-actions {
+    flex-wrap: wrap;
+  }
 }
 
 #entries .empty {

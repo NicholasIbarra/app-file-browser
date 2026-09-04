@@ -27,7 +27,6 @@ public class FileSearchIndex : IFileSearchIndex, IDisposable
     /// </summary>
     public IReadOnlyList<FileIndexEntry> Snapshot => Volatile.Read(ref _snapshot);
 
-
     public async Task RebuildAsync(CancellationToken cancellationToken)
     {
         await _rebuildLock.WaitAsync(cancellationToken);
@@ -40,6 +39,35 @@ public class FileSearchIndex : IFileSearchIndex, IDisposable
 
             // Searches continue using the old snapshot until
             // the complete new index is ready.
+            Volatile.Write(ref _snapshot, entries);
+        }
+        finally
+        {
+            _rebuildLock.Release();
+        }
+    }
+
+    public async Task RemoveAsync(string path, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        await _rebuildLock.WaitAsync(cancellationToken);
+
+        try
+        {
+            var deletedPath = NormalizeRelativePath(path);
+            var descendantPrefix = deletedPath + "/";
+
+            var entries = Snapshot
+                .Where(entry =>
+                {
+                    var entryPath = NormalizeRelativePath(entry.RelativePath);
+
+                    return !entryPath.Equals(deletedPath, StringComparison.OrdinalIgnoreCase)
+                        && !entryPath.StartsWith(descendantPrefix, StringComparison.OrdinalIgnoreCase);
+                })
+                .ToArray();
+
             Volatile.Write(ref _snapshot, entries);
         }
         finally
@@ -83,6 +111,14 @@ public class FileSearchIndex : IFileSearchIndex, IDisposable
 
         return results;
     }
+
+    private static string NormalizeRelativePath(string path)
+    {
+        return path
+            .Replace('\\', '/')
+            .Trim('/');
+    }
+
     public void Dispose()
     {
         _rebuildLock.Dispose();

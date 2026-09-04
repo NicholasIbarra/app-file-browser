@@ -1,5 +1,7 @@
 using FileBrowser.Application.Abtractstions.FileSystem;
 using FileBrowser.Application.Browsing;
+using FileBrowser.Application.FileChanges;
+using MediatR;
 using NSubstitute;
 
 namespace FileBrowser.Application.Tests.Browsing;
@@ -7,12 +9,14 @@ namespace FileBrowser.Application.Tests.Browsing;
 public sealed class DirectoryBrowserServiceTests
 {
     private readonly IFileSystem _fileSystem;
+    private readonly IPublisher _publisher;
     private readonly DirectoryBrowserService _sut;
 
     public DirectoryBrowserServiceTests()
     {
         _fileSystem = Substitute.For<IFileSystem>();
-        _sut = new DirectoryBrowserService(_fileSystem);
+        _publisher = Substitute.For<IPublisher>();
+        _sut = new DirectoryBrowserService(_fileSystem, _publisher);
     }
 
     [Theory]
@@ -171,6 +175,33 @@ public sealed class DirectoryBrowserServiceTests
         await _sut.DeleteAsync("/Documents", recursive: true, cts.Token);
 
         await _fileSystem.Received(1).DeleteAsync("/Documents", true, cts.Token);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_AfterDeletion_PublishesFileDeletedEvent()
+    {
+        using var cts = new CancellationTokenSource();
+
+        await _sut.DeleteAsync("/Documents/report.pdf", cancellationToken: cts.Token);
+
+        await _publisher.Received(1).Publish(
+            Arg.Is<FileDeletedEvent>(notification =>
+                notification.Path == "/Documents/report.pdf"),
+            cts.Token);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WhenDeletionFails_DoesNotPublishFileDeletedEvent()
+    {
+        _fileSystem
+            .DeleteAsync(Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new IOException("Delete failed.")));
+
+        await Assert.ThrowsAsync<IOException>(() => _sut.DeleteAsync("/Documents/report.pdf"));
+
+        await _publisher.DidNotReceive().Publish(
+            Arg.Any<FileDeletedEvent>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]

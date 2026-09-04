@@ -2,6 +2,8 @@ export interface AppShell {
   entries: HTMLUListElement
   path: HTMLParagraphElement
   reIndexButton: HTMLButtonElement
+  uploadButton: HTMLButtonElement
+  uploadInput: HTMLInputElement
   searchButton: HTMLButtonElement
   searchInput: HTMLInputElement
   searchOverlay: HTMLDivElement
@@ -21,6 +23,8 @@ export function renderAppShell(root: HTMLDivElement): AppShell {
   root.innerHTML = `
     <main class="explorer">
       <header><h1>File Explorer</h1><div class="header-actions">
+        <button id="upload-button" type="button">Upload</button>
+        <input id="upload-input" class="visually-hidden" type="file" multiple />
         <button id="re-index-button" type="button">Re-index</button>
         <button id="search-button" type="button" aria-haspopup="dialog"><span>Search</span><kbd aria-hidden="true">⌘ K</kbd></button>
         <button id="theme-toggle" type="button"></button>
@@ -45,6 +49,7 @@ export function renderAppShell(root: HTMLDivElement): AppShell {
   return {
     entries: getElement(root, '#entries'), path: getElement(root, '#current-path'),
     reIndexButton: getElement(root, '#re-index-button'), searchButton: getElement(root, '#search-button'),
+    uploadButton: getElement(root, '#upload-button'), uploadInput: getElement(root, '#upload-input'),
     searchInput: getElement(root, '#search-input'), searchOverlay: getElement(root, '#search-overlay'),
     searchResults: getElement(root, '#search-results'), searchStatus: getElement(root, '#search-status'),
     status: getElement(root, '#status'), themeToggle: getElement(root, '#theme-toggle'),

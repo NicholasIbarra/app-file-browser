@@ -1,3 +1,4 @@
+using FileBrowser.Application;
 using FileBrowser.Application.Abtractstions.FileSystem;
 using FileBrowser.Application.Abtractstions.Indexing;
 using FileBrowser.Application.Browsing;
@@ -26,6 +27,9 @@ public static class DependencyInjection
         services.AddSingleton<IFileSearchIndex, FileSearchIndex>();
         services.AddSingleton<IFileSearchScorer, FileSearchScorer>();
         services.AddHostedService<FileIndexHostedService>();
+
+        services.AddMediatR(configuration =>
+            configuration.RegisterServicesFromAssembly(typeof(FileBrowserApplication).Assembly));
 
         var options = new FileBrowserOptions();
         configuration.GetSection(FileBrowserOptions.SectionName).Bind(options);
