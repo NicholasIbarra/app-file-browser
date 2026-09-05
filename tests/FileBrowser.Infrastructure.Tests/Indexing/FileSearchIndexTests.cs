@@ -4,6 +4,7 @@ using FileBrowser.Infrastructure.AI;
 using FileBrowser.Infrastructure.FileSystem;
 using FileBrowser.Infrastructure.Indexing;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 
 namespace FileBrowser.Infrastructure.Tests.Indexing;
@@ -217,7 +218,8 @@ public sealed class FileSearchIndexTests : IDisposable
         return new FileSearchIndex(
             fileSystem,
             Substitute.For<IEmbeddingService>(),
-            Options.Create(new AzureOpenAiOptions { Enabled = false }));
+            Options.Create(new AzureOpenAiOptions { Enabled = false }),
+            NullLogger<FileSearchIndex>.Instance);
     }
 
     public void Dispose()

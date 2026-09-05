@@ -3,6 +3,8 @@ using FileBrowser.Application.Abtractstions.FileSystem;
 using FileBrowser.Application.Abtractstions.Indexing;
 using FileBrowser.Infrastructure.AI;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 namespace FileBrowser.Infrastructure.Indexing;
 
@@ -20,12 +22,14 @@ public class FileSearchIndex : IFileSearchIndex, IDisposable
     private readonly IEmbeddingService _embeddingService;
 
     private readonly bool _embeddingEnabled;
+    private readonly ILogger<FileSearchIndex> _logger;
 
-    public FileSearchIndex(IFileSystem fileSystem, IEmbeddingService embeddingService, IOptions<AzureOpenAiOptions> options)
+    public FileSearchIndex(IFileSystem fileSystem, IEmbeddingService embeddingService, IOptions<AzureOpenAiOptions> options, ILogger<FileSearchIndex> logger)
     {
         _fileSystem = fileSystem;
         _embeddingService = embeddingService;
         _embeddingEnabled = options.Value.Enabled;
+        _logger = logger;
     }
 
     /// <summary>
@@ -41,11 +45,18 @@ public class FileSearchIndex : IFileSearchIndex, IDisposable
 
         try
         {
+            var stopwatch = Stopwatch.StartNew();
             var entries = await BuildIndexAsync(cancellationToken);
 
             // Searches continue using the old snapshot until
             // the complete new index is ready.
             Volatile.Write(ref _snapshot, entries);
+            stopwatch.Stop();
+
+            _logger.LogInformation(
+                "File search index rebuilt: {TotalRecordsIndexed} records indexed in {ElapsedMilliseconds} ms.",
+                entries.Count,
+                stopwatch.Elapsed.TotalMilliseconds);
         }
         finally
         {
