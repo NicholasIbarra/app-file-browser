@@ -6,6 +6,7 @@ using FileBrowser.Application.Abtractstions.BackgroundJobs;
 using FileBrowser.Application.Abtractstions.FileSystem;
 using FileBrowser.Application.Abtractstions.Indexing;
 using FileBrowser.Application.Browsing;
+using FileBrowser.Application.Files;
 using FileBrowser.Application.Search;
 using FileBrowser.Infrastructure.AI;
 using FileBrowser.Infrastructure.BackgroundJobs;

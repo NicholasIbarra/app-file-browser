@@ -1,7 +1,7 @@
 using FileBrowser.Api.ErrorHandling;
 using FileBrowser.Api.Extensions;
 using FileBrowser.Api.Hubs;
-using FileBrowser.Application.FileChanges;
+using FileBrowser.Application.Files.Events;
 using FileBrowser.Infrastructure;
 using Hangfire;
 using MediatR;

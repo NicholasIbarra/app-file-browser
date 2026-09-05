@@ -1,8 +1,8 @@
 using FileBrowser.Application.Abtractstions.FileSystem;
-using FileBrowser.Application.FileChanges;
+using FileBrowser.Application.Files.Events;
 using MediatR;
 
-namespace FileBrowser.Application.Browsing;
+namespace FileBrowser.Application.Files;
 
 public sealed class FileUploadJob(IFileSystem fileSystem, IPublisher publisher)
 {

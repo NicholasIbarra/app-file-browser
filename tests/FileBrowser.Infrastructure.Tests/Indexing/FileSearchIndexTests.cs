@@ -1,4 +1,6 @@
+using FileBrowser.Application.Abtractstions.AI;
 using FileBrowser.Application.Abtractstions.FileSystem;
+using FileBrowser.Infrastructure.AI;
 using FileBrowser.Infrastructure.FileSystem;
 using FileBrowser.Infrastructure.Indexing;
 using Microsoft.Extensions.Options;
@@ -59,7 +61,7 @@ public sealed class FileSearchIndexTests : IDisposable
                     null,
                     DateTimeOffset.UtcNow)
             ]);
-        using var sut = new FileSearchIndex(fileSystem);
+        using var sut = CreateIndex(fileSystem);
 
         await sut.RebuildAsync(CancellationToken.None);
 
@@ -90,7 +92,7 @@ public sealed class FileSearchIndexTests : IDisposable
                     null,
                     modified)
             ]);
-        using var sut = new FileSearchIndex(fileSystem);
+        using var sut = CreateIndex(fileSystem);
 
         await sut.AddOrUpdateAsync("/Documents", CancellationToken.None);
 
@@ -207,7 +209,15 @@ public sealed class FileSearchIndexTests : IDisposable
         });
         var fileSystem = new LocalFileSystem(new FileSystemPathResolver(options));
 
-        return new FileSearchIndex(fileSystem);
+        return CreateIndex(fileSystem);
+    }
+
+    private static FileSearchIndex CreateIndex(IFileSystem fileSystem)
+    {
+        return new FileSearchIndex(
+            fileSystem,
+            Substitute.For<IEmbeddingService>(),
+            Options.Create(new AzureOpenAiOptions { Enabled = false }));
     }
 
     public void Dispose()

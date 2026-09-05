@@ -1,7 +1,8 @@
 using FileBrowser.Application.Abtractstions.Indexing;
+using FileBrowser.Application.Files.Events;
 using MediatR;
 
-namespace FileBrowser.Application.FileChanges;
+namespace FileBrowser.Application.Files.EventHandlers;
 
 public sealed class FileCreatedEventHandler : INotificationHandler<FileCreatedEvent>
 {

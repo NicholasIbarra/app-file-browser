@@ -2,6 +2,7 @@
 using FileBrowser.Application.Browsing;
 using FileBrowser.Api.Models;
 using Microsoft.AspNetCore.Mvc;
+using FileBrowser.Application.Files;
 
 namespace FileBrowser.Api.Controllers;
 
@@ -10,14 +11,17 @@ namespace FileBrowser.Api.Controllers;
 public class DirectoriesController : ControllerBase
 {
     private readonly IDirectoryBrowserService _directoryBrowserService;
+    private readonly IFileService _fileService;
     private readonly IFileSearchIndex _fileSearchIndex;
 
     public DirectoriesController(
         IDirectoryBrowserService directoryBrowserService,
-        IFileSearchIndex fileSearchIndex)
+        IFileSearchIndex fileSearchIndex,
+        IFileService fileService)
     {
         _directoryBrowserService = directoryBrowserService;
         _fileSearchIndex = fileSearchIndex;
+        _fileService = fileService;
     }
 
     [HttpGet]
@@ -38,7 +42,7 @@ public class DirectoriesController : ControllerBase
         [FromQuery] string path,
         CancellationToken cancellationToken)
     {
-        var download = await _directoryBrowserService.DownloadAsync(
+        var download = await _fileService.DownloadAsync(
             path,
             cancellationToken);
 
@@ -67,7 +71,7 @@ public class DirectoriesController : ControllerBase
         CancellationToken cancellationToken)
     {
         await using var content = file.OpenReadStream();
-        var jobId = await _directoryBrowserService.UploadAsync(
+        var jobId = await _fileService.UploadAsync(
             path,
             content,
             overwrite,
@@ -82,7 +86,7 @@ public class DirectoriesController : ControllerBase
         [FromQuery] bool recursive,
         CancellationToken cancellationToken)
     {
-        await _directoryBrowserService.DeleteAsync(path, recursive, cancellationToken);
+        await _fileService.DeleteAsync(path, recursive, cancellationToken);
         return NoContent();
     }
 
@@ -91,7 +95,7 @@ public class DirectoriesController : ControllerBase
         [FromBody] FileOperationRequest request,
         CancellationToken cancellationToken)
     {
-        await _directoryBrowserService.MoveAsync(
+        await _fileService.MoveAsync(
             request.SourcePath,
             request.DestinationPath,
             request.Overwrite,
@@ -105,7 +109,7 @@ public class DirectoriesController : ControllerBase
         [FromBody] FileOperationRequest request,
         CancellationToken cancellationToken)
     {
-        await _directoryBrowserService.CopyAsync(
+        await _fileService.CopyAsync(
             request.SourcePath,
             request.DestinationPath,
             request.Overwrite,

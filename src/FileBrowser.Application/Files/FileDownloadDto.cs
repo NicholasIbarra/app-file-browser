@@ -1,4 +1,4 @@
-namespace FileBrowser.Application.Browsing;
+namespace FileBrowser.Application.Files;
 
 public sealed record FileDownloadDto(
     string FileName,

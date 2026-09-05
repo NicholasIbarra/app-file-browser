@@ -1,4 +1,4 @@
-using FileBrowser.Application.FileChanges;
+using FileBrowser.Application.Files.Events;
 using MediatR;
 using Microsoft.AspNetCore.SignalR;
 
