@@ -19,14 +19,14 @@ initializeThemeToggle(appShell.themeToggle)
 
 new SearchDialog(
     appShell, 
-    (path) => void explorer.load(path, 'push'));
+    (path) => void explorer.loadDirectoryItems(path, 'push'));
 
 // Handle the back button
 window.addEventListener(
     'popstate', 
-    () => void explorer.load(getUrlPath()))
+    () => void explorer.loadDirectoryItems(getUrlPath()))
 
-void explorer.load(getUrlPath())
+void explorer.loadDirectoryItems(getUrlPath())
 
 const disconnectFileHub = connectFileHub(() => explorer.refresh())
 import.meta.hot?.dispose(disconnectFileHub)

@@ -12,21 +12,28 @@ export class SearchDialog {
   constructor(elements: AppShell, navigate: (path?: string) => void) {
     this.elements = elements
     this.navigate = navigate
+
     this.setupAiSearch()
     void this.loadSettings()
+    
     elements.searchButton.addEventListener('click', () => this.open())
     elements.searchInput.addEventListener('input', () => void this.search(elements.searchInput.value))
     elements.searchOverlay.addEventListener('click', (event) => {
-      if (event.target === elements.searchOverlay) this.close()
+      if (event.target === elements.searchOverlay) {
+        this.close()
+      }
     })
+
     document.addEventListener('keydown', (event) => this.handleKeydown(event))
   }
 
   private async loadSettings() {
     try {
       const settings = await getSettings()
+
       this.semanticSearchEnabled = settings.semanticSearchEnabled === true
       this.elements.searchOverlay.querySelector<HTMLButtonElement>('#ai-search-tab')!.hidden = !this.semanticSearchEnabled
+    
     } catch (error) {
       console.error('Unable to load search settings.', error)
     }
@@ -44,28 +51,45 @@ export class SearchDialog {
     const aiInput = overlay.querySelector<HTMLInputElement>('#ai-search-input')!
 
     const selectTab = (selected: HTMLButtonElement) => {
-      if (selected.hidden) return
+      if (selected.hidden) {
+        return
+      }
+
       this.request?.abort()
       this.request = undefined
-      if (this.aiRequest) this.resetAiSearch()
+      
+      if (this.aiRequest) {
+        this.resetAiSearch()
+      }
+
       for (const tab of tabs) {
         const active = tab === selected
+
         tab.setAttribute('aria-selected', String(active))
         tab.tabIndex = active ? 0 : -1
+        
         overlay.querySelector<HTMLElement>(`#${tab.getAttribute('aria-controls')}`)!.hidden = !active
       }
-      if (selected.id === 'file-search-tab') void this.search(this.elements.searchInput.value)
+      
+      if (selected.id === 'file-search-tab') {
+        void this.search(this.elements.searchInput.value)
+      }
     }
 
     tabs.forEach((tab) => {
       tab.addEventListener('click', () => selectTab(tab))
       tab.addEventListener('keydown', (event) => {
-        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+          return
+        }
+
         event.preventDefault()
+        
         const visibleTabs = tabs.filter((candidate) => !candidate.hidden)
         const index = visibleTabs.indexOf(tab)
         const direction = event.key === 'ArrowLeft' ? -1 : 1
         const next = event.key === 'Home' ? visibleTabs[0] : event.key === 'End' ? visibleTabs[visibleTabs.length - 1] : visibleTabs[(index + direction + visibleTabs.length) % visibleTabs.length]
+        
         selectTab(next!)
         next!.focus()
       })
@@ -75,9 +99,14 @@ export class SearchDialog {
     overlay.querySelector('#ai-search-form')!.addEventListener('submit', (event) => {
       event.preventDefault()
       const query = aiInput.value.trim()
-      if (!query) return
+      
+      if (!query) {
+        return
+      }
+
       void this.searchAi(query)
     })
+
     overlay.querySelectorAll<HTMLButtonElement>('.ai-search-examples button').forEach((button) => {
       button.addEventListener('click', () => {
         aiInput.value = button.textContent ?? ''
@@ -90,9 +119,12 @@ export class SearchDialog {
   private resetAiSearch() {
     this.aiRequest?.abort()
     this.aiRequest = undefined
+
     const overlay = this.elements.searchOverlay
     overlay.querySelector<HTMLElement>('#ai-search-preview')!.hidden = true
+    
     const results = overlay.querySelector<HTMLUListElement>('#ai-search-results')!
+
     results.replaceChildren()
     results.hidden = true
     overlay.querySelector<HTMLButtonElement>('.ai-search-submit')!.disabled = false
@@ -100,13 +132,18 @@ export class SearchDialog {
   }
 
   private async searchAi(query: string) {
-    if (!this.semanticSearchEnabled) return
+    if (!this.semanticSearchEnabled) {
+      return
+    }
+
     this.resetAiSearch()
+    
     const overlay = this.elements.searchOverlay
     const status = overlay.querySelector<HTMLDivElement>('#ai-search-preview')!
     const results = overlay.querySelector<HTMLUListElement>('#ai-search-results')!
     const submit = overlay.querySelector<HTMLButtonElement>('.ai-search-submit')!
     const request = new AbortController()
+    
     this.aiRequest = request
     status.textContent = 'Searching…'
     status.hidden = false
@@ -115,14 +152,22 @@ export class SearchDialog {
 
     try {
       const response = await searchFilesSemantic(query, undefined, request.signal)
-      if (this.aiRequest !== request) return
+      if (this.aiRequest !== request) {
+        return
+      }
+
       const matches = response.results ?? []
+      
       this.renderResults(matches, results, status)
       status.textContent = response.message?.trim()
         || (matches.length ? `Found ${matches.length} matching files.` : 'No matching files or folders.')
+
       status.hidden = false
     } catch (error) {
-      if (request.signal.aborted || this.aiRequest !== request) return
+      if (request.signal.aborted || this.aiRequest !== request) {
+        return
+      }
+
       status.textContent = 'Unable to search right now. Please try again.'
       console.error(error)
     } finally {
@@ -145,8 +190,10 @@ export class SearchDialog {
     document.body.classList.remove('search-open')
     
     searchInput.value = ''
+    
     this.elements.searchOverlay.querySelector<HTMLFormElement>('#ai-search-form')!.reset()
     this.elements.searchOverlay.querySelector<HTMLElement>('#ai-search-preview')!.hidden = true
+    
     searchResults.replaceChildren()
     searchResults.hidden = true
     searchStatus.hidden = false

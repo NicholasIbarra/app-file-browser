@@ -32,7 +32,7 @@ export class DirectoryExplorer {
     })
   }
 
-  async load(path?: string, urlMode: NavigationMode = 'none') {
+  async loadDirectoryItems(path?: string, urlMode: NavigationMode = 'none') {
     this.requestedPath = path
     const version = ++this.loadVersion
     if (urlMode !== 'none') updateUrl(path, urlMode)
@@ -58,7 +58,7 @@ export class DirectoryExplorer {
   }
 
   refresh() {
-    return this.load(this.requestedPath)
+    return this.loadDirectoryItems(this.requestedPath)
   }
 
   private async uploadSelectedFiles() {
@@ -129,7 +129,7 @@ export class DirectoryExplorer {
   }
 
   private async download(path: string, fileName: string) {
-    this.setActionsDisabled(true)
+    this.setMenuActionsDisabled(true)
     this.showStatus(`Downloading ${fileName}…`)
 
     try {
@@ -151,7 +151,7 @@ export class DirectoryExplorer {
       this.showStatus('Unable to download this file.')
       console.error(error)
     } finally {
-      this.setActionsDisabled(false)
+      this.setMenuActionsDisabled(false)
     }
   }
 
@@ -161,17 +161,17 @@ export class DirectoryExplorer {
     errorMessage: string,
     operation: () => Promise<void>,
   ) {
-    this.setActionsDisabled(true)
+    this.setMenuActionsDisabled(true)
     this.showStatus(pendingMessage)
     try {
       await operation()
       notyf.success(successMessage)
-      await this.load(this.currentPath)
+      await this.loadDirectoryItems(this.currentPath)
     } catch (error) {
       this.showStatus(errorMessage)
       console.error(error)
     } finally {
-      this.setActionsDisabled(false)
+      this.setMenuActionsDisabled(false)
     }
   }
 
@@ -180,7 +180,7 @@ export class DirectoryExplorer {
     this.elements.status.textContent = message
   }
 
-  private setActionsDisabled(disabled: boolean) {
+  private setMenuActionsDisabled(disabled: boolean) {
     for (const menu of this.elements.entries.querySelectorAll<HTMLDetailsElement>('.entry-actions')) {
       menu.classList.toggle('is-disabled', disabled)
 
@@ -239,7 +239,7 @@ export class DirectoryExplorer {
         }
 
         event.preventDefault()
-        void this.load(breadcrumb.path, 'push')
+        void this.loadDirectoryItems(breadcrumb.path, 'push')
       })
 
       target.append(link)
@@ -260,7 +260,7 @@ export class DirectoryExplorer {
       
       button.type = 'button'
       button.textContent = '..'
-      button.addEventListener('click', () => void this.load(getParentPath(contents.path!), 'push'))
+      button.addEventListener('click', () => void this.loadDirectoryItems(getParentPath(contents.path!), 'push'))
       
       const item = document.createElement('li')
       
@@ -281,7 +281,7 @@ export class DirectoryExplorer {
       
         button.type = 'button'
         button.textContent = `${entry.name ?? entry.path}/`
-        button.addEventListener('click', () => void this.load(entry.path!, 'push'))
+        button.addEventListener('click', () => void this.loadDirectoryItems(entry.path!, 'push'))
       
         entryMain.append(button)
 
