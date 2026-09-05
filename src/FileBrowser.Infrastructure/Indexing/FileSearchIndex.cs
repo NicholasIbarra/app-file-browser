@@ -1,5 +1,8 @@
-﻿using FileBrowser.Application.Abtractstions.FileSystem;
+﻿using FileBrowser.Application.Abtractstions.AI;
+using FileBrowser.Application.Abtractstions.FileSystem;
 using FileBrowser.Application.Abtractstions.Indexing;
+using FileBrowser.Infrastructure.AI;
+using Microsoft.Extensions.Options;
 
 namespace FileBrowser.Infrastructure.Indexing;
 
@@ -7,15 +10,22 @@ public class FileSearchIndex : IFileSearchIndex, IDisposable
 {
     private readonly SemaphoreSlim _rebuildLock = new(1, 1);
 
-    private readonly IFileSystem _fileSystem;
-
     private IReadOnlyList<FileIndexEntry> _snapshot =
         Array.Empty<FileIndexEntry>();
 
+    private const int MAX_EMBEDDING_BATCH_SIZE = 500;
 
-    public FileSearchIndex(IFileSystem fileSystem)
+    private readonly IFileSystem _fileSystem;
+
+    private readonly IEmbeddingService _embeddingService;
+
+    private readonly bool _embeddingEnabled;
+
+    public FileSearchIndex(IFileSystem fileSystem, IEmbeddingService embeddingService, IOptions<AzureOpenAiOptions> options)
     {
         _fileSystem = fileSystem;
+        _embeddingService = embeddingService;
+        _embeddingEnabled = options.Value.Enabled;
     }
 
     /// <summary>
@@ -130,7 +140,68 @@ public class FileSearchIndex : IFileSearchIndex, IDisposable
     internal async Task<IReadOnlyList<FileIndexEntry>> BuildIndexAsync(CancellationToken cancellationToken)
     {
         var contents = await _fileSystem.GetAllDirectoryContentsAsync("/", cancellationToken);
-        return contents.Select(Map).ToArray();
+
+        var entries = contents.Select(Map).ToArray();
+
+        return _embeddingEnabled
+            ? await GenerateEmbeddings(entries, cancellationToken)
+            : entries;
+    }
+
+    private async Task<IReadOnlyList<FileIndexEntry>> GenerateEmbeddings(
+        IReadOnlyList<FileIndexEntry> entries,
+        CancellationToken cancellationToken)
+    {
+        if (!_embeddingEnabled)
+        {
+            return entries;
+        }
+
+        var results = new FileIndexEntry[entries.Count];
+
+        var batches = entries
+            .Select((entry, index) => (entry, index))
+            .Chunk(MAX_EMBEDDING_BATCH_SIZE);
+
+        await Parallel.ForEachAsync(
+            batches,
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = 4,
+                CancellationToken = cancellationToken
+            },
+            async (batch, ct) =>
+            {
+                var inputs = batch
+                    .Select(x => BuildEmbeddingText(x.entry))
+                    .ToArray();
+
+                var embeddings = await _embeddingService.GenerateAsync(
+                    inputs,
+                    ct);
+
+                foreach (var (entry, index) in batch)
+                {
+                    var input = BuildEmbeddingText(entry);
+
+                    results[index] = entry with
+                    {
+                        Embedding = embeddings[input]
+                    };
+                }
+            });
+
+        return results;
+    }
+
+    private static string BuildEmbeddingText(FileIndexEntry entry)
+    {
+        return $"""
+        Name: {entry.Name}
+        Path: {entry.RelativePath}
+        Type: {(entry.IsDirectory ? "Directory" : "File")}
+        Extension: {entry.Extension}
+        """;
     }
 
     internal static string NormalizeRelativePath(string path)
@@ -157,7 +228,8 @@ public class FileSearchIndex : IFileSearchIndex, IDisposable
             RelativePath: NormalizeRelativePath(entry.Path),
             FullPath: entry.Path,
             IsDirectory: isDirectory,
-            Extension: isDirectory ? null : Path.GetExtension(entry.Name));
+            Extension: isDirectory ? null : Path.GetExtension(entry.Name),
+            null);
     }
 
     private async Task<IReadOnlyList<FileIndexEntry>> BuildEntriesAsync(

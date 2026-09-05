@@ -5,4 +5,5 @@ public sealed record FileIndexEntry(
     string RelativePath,
     string FullPath,
     bool IsDirectory,
-    string? Extension);
+    string? Extension,
+    float[]? Embedding);

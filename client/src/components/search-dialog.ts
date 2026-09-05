@@ -10,6 +10,7 @@ export class SearchDialog {
   constructor(elements: AppShell, navigate: (path?: string) => void) {
     this.elements = elements
     this.navigate = navigate
+    this.setupAiSearch()
     elements.searchButton.addEventListener('click', () => this.open())
     elements.searchInput.addEventListener('input', () => void this.search(elements.searchInput.value))
     elements.searchOverlay.addEventListener('click', (event) => {
@@ -21,7 +22,59 @@ export class SearchDialog {
   private open() {
     this.elements.searchOverlay.hidden = false
     document.body.classList.add('search-open')
-    this.elements.searchInput.focus()
+    this.elements.searchOverlay.querySelector<HTMLInputElement>('[role="tabpanel"]:not([hidden]) input')?.focus()
+  }
+
+  private setupAiSearch() {
+    const overlay = this.elements.searchOverlay
+    const tabs = Array.from(overlay.querySelectorAll<HTMLButtonElement>('[role="tab"]'))
+    const aiInput = overlay.querySelector<HTMLInputElement>('#ai-search-input')!
+    const preview = overlay.querySelector<HTMLDivElement>('#ai-search-preview')!
+
+    const selectTab = (selected: HTMLButtonElement) => {
+      this.request?.abort()
+      this.request = undefined
+      for (const tab of tabs) {
+        const active = tab === selected
+        tab.setAttribute('aria-selected', String(active))
+        tab.tabIndex = active ? 0 : -1
+        overlay.querySelector<HTMLElement>(`#${tab.getAttribute('aria-controls')}`)!.hidden = !active
+      }
+      if (selected.id === 'file-search-tab') void this.search(this.elements.searchInput.value)
+    }
+
+    tabs.forEach((tab, index) => {
+      tab.addEventListener('click', () => selectTab(tab))
+      tab.addEventListener('keydown', (event) => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+        event.preventDefault()
+        const next = event.key === 'Home' ? tabs[0] : event.key === 'End' ? tabs[tabs.length - 1] : tabs[(index + 1) % tabs.length]
+        selectTab(next!)
+        next!.focus()
+      })
+    })
+
+    aiInput.addEventListener('input', () => { preview.hidden = true })
+    overlay.querySelector('#ai-search-form')!.addEventListener('submit', (event) => {
+      event.preventDefault()
+      const query = aiInput.value.trim()
+      if (!query) return
+      const title = document.createElement('strong')
+      title.textContent = 'Search preview'
+      const description = document.createElement('p')
+      description.textContent = `You asked: “${query}”`
+      const hint = document.createElement('p')
+      hint.textContent = 'Matching files will appear here with an explanation of why they fit your request.'
+      preview.replaceChildren(title, description, hint)
+      preview.hidden = false
+    })
+    overlay.querySelectorAll<HTMLButtonElement>('.ai-search-examples button').forEach((button) => {
+      button.addEventListener('click', () => {
+        aiInput.value = button.textContent ?? ''
+        preview.hidden = true
+        aiInput.focus()
+      })
+    })
   }
 
   private close() {
@@ -34,6 +87,8 @@ export class SearchDialog {
     document.body.classList.remove('search-open')
     
     searchInput.value = ''
+    this.elements.searchOverlay.querySelector<HTMLFormElement>('#ai-search-form')!.reset()
+    this.elements.searchOverlay.querySelector<HTMLElement>('#ai-search-preview')!.hidden = true
     searchResults.replaceChildren()
     searchResults.hidden = true
     searchStatus.hidden = false

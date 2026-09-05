@@ -132,6 +132,89 @@ kbd {
   padding: 16px 18px;
 }
 
+.search-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.search-tabs button,
+.ai-search-examples button,
+.ai-search-submit {
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.search-tabs button[aria-selected='true'],
+.ai-search-examples button:hover {
+  background: var(--background);
+  color: var(--link);
+}
+
+.search-preview-badge {
+  margin-left: 5px;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.search-field .ai-search-icon {
+  stroke: var(--link);
+}
+
+.ai-search-submit {
+  flex-shrink: 0;
+  border-color: var(--border);
+  color: var(--link);
+}
+
+.ai-search-content {
+  padding: 16px 18px;
+  border-top: 1px solid var(--border);
+  font-size: 0.875rem;
+}
+
+.ai-search-content p {
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.ai-search-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ai-search-examples button {
+  border-color: var(--border);
+  text-align: left;
+}
+
+.ai-search-preview {
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 8px;
+  background: var(--background);
+  overflow-wrap: anywhere;
+}
+
+.ai-search-preview strong {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.ai-search-content .ai-search-note {
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
 .search-field svg {
   width: 24px;
   flex: 0 0 auto;

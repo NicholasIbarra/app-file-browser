@@ -1,16 +1,20 @@
+using Azure.AI.OpenAI;
 using Azure.Storage.Blobs;
 using FileBrowser.Application;
+using FileBrowser.Application.Abtractstions.AI;
 using FileBrowser.Application.Abtractstions.BackgroundJobs;
 using FileBrowser.Application.Abtractstions.FileSystem;
 using FileBrowser.Application.Abtractstions.Indexing;
 using FileBrowser.Application.Browsing;
 using FileBrowser.Application.Search;
+using FileBrowser.Infrastructure.AI;
 using FileBrowser.Infrastructure.BackgroundJobs;
 using FileBrowser.Infrastructure.BackgroundServices;
 using FileBrowser.Infrastructure.FileSystem;
 using FileBrowser.Infrastructure.Indexing;
 using Hangfire;
 using Hangfire.MemoryStorage;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -55,6 +59,8 @@ public static class DependencyInjection
 
         services.AddScoped<IBackgroundJobManager, HangfireBackgroundJobManager>();
 
+        services.AddAiClients(configuration);
+
         var options = new FileBrowserOptions();
         configuration.GetSection(FileBrowserOptions.SectionName).Bind(options);
 
@@ -91,8 +97,29 @@ public static class DependencyInjection
                     $"Unknown file system provider '{options.Provider}'.");
         }
 
+        return services;
+    }
 
+    private static IServiceCollection AddAiClients(this IServiceCollection services, IConfiguration configuration)
+    {
+        var options = new AzureOpenAiOptions();
+        configuration.GetSection(AzureOpenAiOptions.SectionName).Bind(options);
+        services.AddSingleton(Options.Create(options));
 
+        var azureOpenAiClient = new AzureOpenAIClient(
+            new Uri(options.Endpoint), 
+            new Azure.AzureKeyCredential(options.Key));
+
+        var embeddingClient = azureOpenAiClient.GetEmbeddingClient(options.EmbeddingModel);
+
+        services.AddSingleton(embeddingClient);
+        services.AddSingleton<IEmbeddingService, OpenAiEmbeddingService>();
+
+        IChatClient chatClient = azureOpenAiClient.GetChatClient(options.ChatModel).AsIChatClient();
+        services.AddChatClient(chatClient);
+
+        //services.AddScoped<IAgentContextProvider, AgentContextProvider>();
+        //services.AddSingleton<IAgentPromptBuilder, AgentPromptBuilder>();
 
         return services;
     }
