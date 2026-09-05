@@ -8,6 +8,9 @@ using FileBrowser.Application.Abtractstions.Indexing;
 using FileBrowser.Application.Browsing;
 using FileBrowser.Application.Files;
 using FileBrowser.Application.Search;
+using FileBrowser.Application.Search.Prompts;
+using FileBrowser.Application.Search.Scorer;
+using FileBrowser.Application.Search.Semantic;
 using FileBrowser.Infrastructure.AI;
 using FileBrowser.Infrastructure.BackgroundJobs;
 using FileBrowser.Infrastructure.BackgroundServices;
@@ -42,6 +45,8 @@ public static class DependencyInjection
         
         services.AddSingleton<IFileSearchIndex, FileSearchIndex>();
         services.AddSingleton<IFileSearchScorer, FileSearchScorer>();
+        services.AddSingleton<ICosineSimilarity, CosineSimilarity>();
+        services.AddSingleton<IFileSearchPromptBuilder, FileSearchPromptBuilder>();
         services.AddSingleton<IFileSystemPathResolver, FileSystemPathResolver>();
 
         services.AddHostedService<FileIndexHostedService>();

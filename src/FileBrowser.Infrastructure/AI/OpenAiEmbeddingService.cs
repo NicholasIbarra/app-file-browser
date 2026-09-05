@@ -1,5 +1,6 @@
 ﻿using FileBrowser.Application.Abtractstions.AI;
 using OpenAI.Embeddings;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace FileBrowser.Infrastructure.AI;
 
@@ -29,5 +30,12 @@ public sealed class OpenAiEmbeddingService(EmbeddingClient client) : IEmbeddingS
             .ToDictionary(
                 x => x.Input,
                 x => x.Embedding);
+    }
+
+    public async Task<float[]> GenerateAsync(string input, CancellationToken cancellationToken = default)
+    {
+        var result = await client.GenerateEmbeddingAsync(input, cancellationToken: cancellationToken);
+
+        return result.Value.ToFloats().ToArray();
     }
 }

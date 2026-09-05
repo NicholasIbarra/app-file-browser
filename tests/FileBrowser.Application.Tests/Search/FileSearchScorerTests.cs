@@ -1,5 +1,5 @@
 using FileBrowser.Application.Abtractstions.Indexing;
-using FileBrowser.Application.Search;
+using FileBrowser.Application.Search.Scorer;
 
 namespace FileBrowser.Application.Tests.Search;
 

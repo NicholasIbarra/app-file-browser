@@ -1,8 +1,11 @@
 using FileBrowser.Application.Abtractstions.Indexing;
 using FileBrowser.Application.Search;
+using FileBrowser.Application.Search.Prompts;
 using NSubstitute;
 using FileBrowser.Application.Abtractstions.AI;
 using Microsoft.Extensions.AI;
+using FileBrowser.Application.Search.Scorer;
+using FileBrowser.Application.Search.Semantic;
 
 namespace FileBrowser.Application.Tests.Search;
 
@@ -13,13 +16,16 @@ public sealed class FileSearchServiceTests
     private readonly FileSearchService _sut;
     private readonly IEmbeddingService _embeddings = Substitute.For<IEmbeddingService>();
     private readonly IChatClient _chat = Substitute.For<IChatClient>();
+    private readonly ICosineSimilarity _cosineSimilarity = Substitute.For<ICosineSimilarity>();
 
     public FileSearchServiceTests()
     {
         _searchIndex = Substitute.For<IFileSearchIndex>();
         _searchScorer = Substitute.For<IFileSearchScorer>();
         _searchIndex.Snapshot.Returns([]);
-        _sut = new FileSearchService(_searchIndex, _searchScorer, _embeddings, _chat);
+        _sut = new FileSearchService(
+            _searchIndex, _searchScorer, _cosineSimilarity, _embeddings, _chat,
+            new FileSearchPromptBuilder());
     }
 
     [Theory]
@@ -113,6 +119,28 @@ public sealed class FileSearchServiceTests
 
         Assert.Throws<OperationCanceledException>(() =>
             _sut.SearchAsync("report", cancellationToken: cancellationTokenSource.Token));
+    }
+
+    [Fact]
+    public async Task SearchSemanticAsync_OrdersResultsUsingInjectedSimilarity()
+    {
+        float[] queryEmbedding = [1, 0];
+        var first = CreateEntry("first.txt") with { Embedding = [1, 0] };
+        var second = CreateEntry("second.txt") with { Embedding = [0, 1] };
+        _searchIndex.Snapshot.Returns([first, second]);
+        _chat.GetResponseAsync(
+                Arg.Any<IEnumerable<ChatMessage>>(), Arg.Any<ChatOptions?>(), Arg.Any<CancellationToken>())
+            .Returns(new ChatResponse(new ChatMessage(ChatRole.Assistant, "query")));
+        _embeddings.GenerateAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<string, float[]> { ["query"] = queryEmbedding });
+        _cosineSimilarity.Calculate(queryEmbedding, first.Embedding!).Returns(0.1);
+        _cosineSimilarity.Calculate(queryEmbedding, second.Embedding!).Returns(0.9);
+
+        var result = await _sut.SearchSemanticAsync("query");
+
+        Assert.Equal(["second.txt", "first.txt"], result.Results.Select(item => item.Name));
+        _cosineSimilarity.Received(1).Calculate(queryEmbedding, first.Embedding!);
+        _cosineSimilarity.Received(1).Calculate(queryEmbedding, second.Embedding!);
     }
 
     private static FileIndexEntry CreateEntry(string name) =>

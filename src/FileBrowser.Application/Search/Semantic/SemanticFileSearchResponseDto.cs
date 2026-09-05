@@ -1,4 +1,4 @@
-namespace FileBrowser.Application.Search;
+namespace FileBrowser.Application.Search.Semantic;
 
 public sealed record SemanticFileSearchResponseDto(
     string Message,

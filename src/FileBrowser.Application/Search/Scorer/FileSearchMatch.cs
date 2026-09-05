@@ -1,4 +1,4 @@
-﻿namespace FileBrowser.Application.Search;
+﻿namespace FileBrowser.Application.Search.Scorer;
 
 public sealed record FileSearchMatch(
     int Score,

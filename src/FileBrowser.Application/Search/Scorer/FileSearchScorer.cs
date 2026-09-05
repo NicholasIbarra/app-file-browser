@@ -1,6 +1,6 @@
 ﻿using FileBrowser.Application.Abtractstions.Indexing;
 
-namespace FileBrowser.Application.Search;
+namespace FileBrowser.Application.Search.Scorer;
 
 public sealed class FileSearchScorer : IFileSearchScorer
 {
