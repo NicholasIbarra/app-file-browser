@@ -18,8 +18,4 @@ export async function getDirectory(
   return response.data
 }
 
-export async function reIndexDirectories(): Promise<void> {
-  await httpClient.post('/api/directories/re-index')
-}
-
 export type { DirectoryContents }

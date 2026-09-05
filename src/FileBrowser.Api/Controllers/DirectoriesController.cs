@@ -9,14 +9,10 @@ namespace FileBrowser.Api.Controllers;
 public class DirectoriesController : ControllerBase
 {
     private readonly IDirectoryBrowserService _directoryBrowserService;
-    private readonly IFileSearchIndex _fileSearchIndex;
 
-    public DirectoriesController(
-        IDirectoryBrowserService directoryBrowserService,
-        IFileSearchIndex fileSearchIndex)
+    public DirectoriesController(IDirectoryBrowserService directoryBrowserService)
     {
         _directoryBrowserService = directoryBrowserService;
-        _fileSearchIndex = fileSearchIndex;
     }
 
     [HttpGet]
@@ -29,14 +25,5 @@ public class DirectoriesController : ControllerBase
             cancellationToken);
 
         return Ok(result);
-    }
-
-    [HttpPost("re-index")]
-    public async Task<IActionResult> ReIndexAsync(
-        CancellationToken cancellationToken)
-    {
-        await _fileSearchIndex.RebuildAsync(cancellationToken);
-
-        return NoContent();
     }
 }

@@ -1,4 +1,4 @@
-export { getDirectory, reIndexDirectories } from './services/directories-service.ts'
+export { getDirectory } from './services/directories-service.ts'
 export type { DirectoryContents } from './services/directories-service.ts'
 export {
   copyEntry,
