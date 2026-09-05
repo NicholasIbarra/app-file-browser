@@ -43,7 +43,7 @@ export function renderAppShell(root: HTMLDivElement): AppShell {
         <h2 id="search-title" class="visually-hidden">Search files</h2>
         <div class="search-tabs" role="tablist" aria-label="Search mode">
           <button id="file-search-tab" type="button" role="tab" aria-selected="true" aria-controls="file-search-panel">Search</button>
-          <button id="ai-search-tab" type="button" role="tab" aria-selected="false" aria-controls="ai-search-panel" tabindex="-1">AI Search <span class="search-preview-badge">Preview</span></button>
+          <button id="ai-search-tab" type="button" role="tab" aria-selected="false" aria-controls="ai-search-panel" tabindex="-1">AI Search</button>
         </div>
         <div id="file-search-panel" role="tabpanel" aria-labelledby="file-search-tab">
         <div class="search-field">
@@ -68,8 +68,8 @@ export function renderAppShell(root: HTMLDivElement): AppShell {
               <button type="button">The latest project proposal PDF</button>
             </div>
             <div id="ai-search-preview" class="ai-search-preview" role="status" hidden></div>
-            <p class="ai-search-note">UI preview · AI search isn’t connected yet.</p>
           </div>
+          <ul id="ai-search-results" aria-label="AI search results" hidden></ul>
         </div>
       </section>
     </div>`

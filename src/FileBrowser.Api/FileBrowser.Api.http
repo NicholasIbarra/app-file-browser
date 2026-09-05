@@ -4,3 +4,8 @@ GET {{FileBrowser.Api_HostAddress}}/weatherforecast/
 Accept: application/json
 
 ###
+
+GET {{FileBrowser.Api_HostAddress}}/api/search/semantic?query=annual%20financial%20reports&limit=10
+Accept: application/json
+
+###

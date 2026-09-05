@@ -25,8 +25,9 @@ internal sealed class SampleDataGenerator(SampleDataOptions options)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
             for (var fileIndex = 0; fileIndex < fileCounts[folderIndex]; fileIndex++)
             {
-                var fileName = UniqueName(usedNames, CreateFileName, ".txt");
-                await destination.WriteTextAsync(CombinePath(folders[folderIndex].Path, fileName), CreateFileContent());
+                var document = CreateDocument(folders[folderIndex], fileIndex);
+                var fileName = UniqueName(usedNames, () => document.Title, ".txt");
+                await destination.WriteTextAsync(CombinePath(folders[folderIndex].Path, fileName), document.Content);
                 createdFiles++;
             }
 
@@ -44,7 +45,7 @@ internal sealed class SampleDataGenerator(SampleDataOptions options)
     {
         var folders = new List<GeneratedFolder>(options.TotalFolders);
         var namesByParent = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-        var parent = new GeneratedFolder(string.Empty, 0);
+        var parent = new GeneratedFolder(string.Empty, 0, null, null, string.Empty);
 
         // Establish a chain so the configured minimum recursion depth is always reached.
         for (var depth = 1; depth <= options.MinFolderDepth; depth++)
@@ -55,8 +56,12 @@ internal sealed class SampleDataGenerator(SampleDataOptions options)
 
         while (folders.Count < options.TotalFolders)
         {
-            var possibleParents = folders.Where(folder => folder.Depth < options.MaxFolderDepth).ToList();
-            possibleParents.Add(new GeneratedFolder(string.Empty, 0));
+            var possibleParents = folders.Where(folder => folder.Depth < options.MaxFolderDepth
+                && (folder.Depth != 1 || options.MaxFolderDepth == 2
+                    || !namesByParent.TryGetValue(folder.Path, out var children)
+                    || children.Count < folder.Department!.Teams.Length)).ToList();
+            if (folders.Count(folder => folder.Depth == 1) < BusinessCatalog.Departments.Length || options.MaxFolderDepth == 1)
+                possibleParents.Add(new GeneratedFolder(string.Empty, 0, null, null, string.Empty));
             parent = possibleParents[_random.Next(possibleParents.Count)];
             folders.Add(await CreateFolderAsync(parent, namesByParent, destination));
         }
@@ -75,8 +80,21 @@ internal sealed class SampleDataGenerator(SampleDataOptions options)
             namesByParent[parent.Path] = usedNames;
         }
 
-        var folderName = UniqueName(usedNames, CreateFolderName);
-        var folder = new GeneratedFolder(CombinePath(parent.Path, folderName), parent.Depth + 1);
+        var department = parent.Department ?? BusinessCatalog.Departments[namesByParent[parent.Path].Count % BusinessCatalog.Departments.Length];
+        var team = parent.Team ?? department.Teams[usedNames.Count % department.Teams.Length];
+        var owner = parent.Depth < 3 ? _faker.Name.FullName() : parent.Owner;
+        var label = parent.Depth switch
+        {
+            0 => department.Name,
+            1 => team.Name,
+            2 => owner,
+            3 => team.Initiative,
+            4 => new[] { "Planning", "Delivery", "Reporting", "Governance" }[usedNames.Count % 4],
+            _ => new[] { "Planning", "Working Papers", "Reviews", "Approvals", "Archive" }[usedNames.Count % 5]
+        };
+        var folderName = UniqueName(usedNames, () => label);
+        var folder = new GeneratedFolder(CombinePath(parent.Path, folderName), parent.Depth + 1,
+            department, parent.Depth == 0 ? null : team, owner);
         await destination.CreateFolderAsync(folder.Path);
         return folder;
     }
@@ -101,35 +119,39 @@ internal sealed class SampleDataGenerator(SampleDataOptions options)
         return result;
     }
 
-    private string CreateFolderName() => _random.Next(4) switch
+    private (string Title, string Content) CreateDocument(GeneratedFolder folder, int index)
     {
-        0 => _faker.Commerce.Department(),
-        1 => _faker.Company.CompanyName(),
-        2 => $"{_faker.Date.Past(8).Year}-{_faker.Hacker.Noun()}",
-        _ => $"{_faker.Address.City()}-{_faker.Hacker.Noun()}"
-    };
-
-    private string CreateFileName() => _random.Next(5) switch
-    {
-        0 => $"{_faker.Hacker.Adjective()}-{_faker.Hacker.Noun()}",
-        1 => $"{_faker.Name.LastName()}-{_faker.Hacker.Noun()}",
-        2 => $"{_faker.Company.CatchPhrase()}-{_faker.Date.Recent(730):yyyy-MM-dd}",
-        3 => $"{_faker.Commerce.ProductName()}-{_faker.Random.AlphaNumeric(6)}",
-        _ => $"{_faker.Lorem.Slug(3)}-{_faker.Random.Number(1000, 9999)}"
-    };
-
-    private string CreateFileContent()
-    {
+        var department = folder.Department!;
+        var team = folder.Team ?? department.Teams[index % department.Teams.Length];
+        // Fixed reporting periods make seeded runs independent of the current date.
+        var period = new DateTime(2025, 1, 1).AddMonths(index / 5);
+        var kind = index % 5;
+        var type = new[] { team.Deliverable, "Status Update", "Risk Register", "Decision Record", "Action Plan" }[kind];
+        var title = $"{period:yyyy-MM} {team.Initiative} - {type}";
         var builder = new StringBuilder();
-        builder.AppendLine(_faker.Company.CatchPhrase());
-        builder.AppendLine($"Owner: {_faker.Name.FullName()} <{_faker.Internet.Email()}>");
-        builder.AppendLine($"Host: {_faker.Internet.DomainName()}");
-        builder.AppendLine($"Updated: {_faker.Date.Recent(730):O}");
+        builder.AppendLine(title);
+        builder.AppendLine("Company: Northstar Business Services (fictional sample data)");
+        builder.AppendLine($"Department: {department.Name}");
+        builder.AppendLine($"Team: {team.Name}");
+        builder.AppendLine($"Accountable owner: {folder.Owner}");
+        builder.AppendLine($"Location: {folder.Path}");
+        builder.AppendLine($"Initiative: {team.Initiative}");
+        builder.AppendLine($"Reporting period: {period:yyyy-MM}");
         builder.AppendLine();
-
-        builder.AppendLine(_faker.Lorem.Paragraphs(_random.Next(2, 7)));
-
-        return builder.ToString();
+        builder.AppendLine($"Purpose: {team.Purpose}");
+        builder.AppendLine();
+        builder.AppendLine(kind switch
+        {
+            0 => $"FINDINGS AND SUPPORTING EVIDENCE\n{team.Evidence}\n\nRECOMMENDATION\n{team.Decision}",
+            1 => $"PROGRESS\n{team.Evidence}\n\nBLOCKER\n{team.Risk}\n\nNEXT MILESTONE\n{team.Action}",
+            2 => $"RISK DESCRIPTION\n{team.Risk}\n\nEXPOSURE AND CONTEXT\n{team.Evidence}\n\nMITIGATION\n{team.Action}",
+            3 => $"DECISION\n{team.Decision}\n\nRATIONALE\n{team.Evidence}\n\nCONSTRAINT\n{team.Risk}",
+            _ => $"REQUIRED ACTION\n{team.Action}\n\nACCEPTANCE CRITERIA\n{team.Decision}\n\nDEPENDENCY\n{team.Risk}"
+        });
+        builder.AppendLine();
+        builder.AppendLine($"Follow-up: {folder.Owner} will review the evidence on {period.AddDays(20):yyyy-MM-dd} and record unresolved items in the {team.Initiative} risk register.");
+        builder.AppendLine($"Related records: {period:yyyy-MM} {team.Initiative} - {team.Deliverable}; {period:yyyy-MM} {team.Initiative} - Action Plan.");
+        return (title, builder.ToString());
     }
 
     private static Faker CreateFaker(int? seed)
@@ -177,5 +199,5 @@ internal sealed class SampleDataGenerator(SampleDataOptions options)
     private static string CombinePath(string parent, string name) =>
         string.IsNullOrEmpty(parent) ? name : $"{parent}/{name}";
 
-    private sealed record GeneratedFolder(string Path, int Depth);
+    private sealed record GeneratedFolder(string Path, int Depth, BusinessDepartment? Department, BusinessTeam? Team, string Owner);
 }

@@ -74,5 +74,5 @@ public sealed class FileSearchScorerTests
     private static FileIndexEntry CreateEntry(
         string name,
         string? relativePath = null) =>
-        new(name, relativePath ?? $"/{name}", $"C:\\Files\\{name}", false, Path.GetExtension(name));
+        new(name, relativePath ?? $"/{name}", $"C:\\Files\\{name}", false, Path.GetExtension(name), null);
 }

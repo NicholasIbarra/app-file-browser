@@ -118,7 +118,8 @@ kbd {
 
 .search-dialog {
   width: min(640px, 100%);
-  overflow: hidden;
+  max-height: 85vh;
+  overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--surface);
@@ -247,7 +248,8 @@ kbd {
   font-size: 0.875rem;
 }
 
-#search-results {
+#search-results,
+#ai-search-results {
   max-height: min(55vh, 440px);
   margin: 0;
   padding: 6px;
@@ -256,7 +258,8 @@ kbd {
   list-style: none;
 }
 
-#search-results li {
+#search-results li,
+#ai-search-results li {
   margin: 0;
 }
 
@@ -307,6 +310,18 @@ kbd {
 .search-result-details span {
   color: var(--muted);
   font-size: 0.8rem;
+}
+
+.search-result-details .search-result-reason {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+.ai-search-submit:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
 
 .search-open {

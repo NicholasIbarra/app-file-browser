@@ -11,4 +11,7 @@ public sealed class FileSearchResultDto
     public bool IsDirectory { get; init; }
 
     public string? Extension { get; init; }
+
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? MatchReason { get; init; }
 }

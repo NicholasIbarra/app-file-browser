@@ -1,5 +1,6 @@
 using FileBrowser.Application.Search;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
 
 namespace FileBrowser.Api.Controllers;
 
@@ -12,6 +13,16 @@ public class SearchController : ControllerBase
     public SearchController(IFileSearchService fileSearchService)
     {
         _fileSearchService = fileSearchService;
+    }
+
+    [HttpGet("semantic")]
+    public async Task<ActionResult<SemanticFileSearchResponseDto>> SearchSemantic(
+        [FromQuery, Required] string query,
+        [FromQuery, Range(1, int.MaxValue)] int limit = 50,
+        CancellationToken cancellationToken = default)
+    {
+        var results = await _fileSearchService.SearchSemanticAsync(query, limit, cancellationToken);
+        return Ok(results);
     }
 
     [HttpGet]

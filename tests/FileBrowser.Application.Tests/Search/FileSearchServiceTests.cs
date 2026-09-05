@@ -1,6 +1,8 @@
 using FileBrowser.Application.Abtractstions.Indexing;
 using FileBrowser.Application.Search;
 using NSubstitute;
+using FileBrowser.Application.Abtractstions.AI;
+using Microsoft.Extensions.AI;
 
 namespace FileBrowser.Application.Tests.Search;
 
@@ -9,13 +11,15 @@ public sealed class FileSearchServiceTests
     private readonly IFileSearchIndex _searchIndex;
     private readonly IFileSearchScorer _searchScorer;
     private readonly FileSearchService _sut;
+    private readonly IEmbeddingService _embeddings = Substitute.For<IEmbeddingService>();
+    private readonly IChatClient _chat = Substitute.For<IChatClient>();
 
     public FileSearchServiceTests()
     {
         _searchIndex = Substitute.For<IFileSearchIndex>();
         _searchScorer = Substitute.For<IFileSearchScorer>();
         _searchIndex.Snapshot.Returns([]);
-        _sut = new FileSearchService(_searchIndex, _searchScorer);
+        _sut = new FileSearchService(_searchIndex, _searchScorer, _embeddings, _chat);
     }
 
     [Theory]
@@ -88,7 +92,7 @@ public sealed class FileSearchServiceTests
     [Fact]
     public void SearchAsync_MapsAllResultFields()
     {
-        var entry = new FileIndexEntry("Reports", "/Documents/Reports", "C:\\Files\\Reports", true, null);
+        var entry = new FileIndexEntry("Reports", "/Documents/Reports", "C:\\Files\\Reports", true, null, null);
         _searchIndex.Snapshot.Returns([entry]);
         _searchScorer.Score(entry, Arg.Any<string>()).Returns(new FileSearchMatch(1000, FileSearchMatchType.ExactName));
 
@@ -112,5 +116,5 @@ public sealed class FileSearchServiceTests
     }
 
     private static FileIndexEntry CreateEntry(string name) =>
-        new(name, $"/{name}", $"C:\\Files\\{name}", false, Path.GetExtension(name));
+        new(name, $"/{name}", $"C:\\Files\\{name}", false, Path.GetExtension(name), null);
 }

@@ -1,9 +1,10 @@
-import { searchFiles, type SearchResult } from '../api'
+import { searchFiles, searchFilesSemantic, type SearchResult } from '../api'
 import { getParentPath } from '../utils/navigation'
 import type { AppShell } from './app-shell'
 
 export class SearchDialog {
   private request?: AbortController
+  private aiRequest?: AbortController
   private readonly elements: AppShell
   private readonly navigate: (path?: string) => void
 
@@ -29,11 +30,11 @@ export class SearchDialog {
     const overlay = this.elements.searchOverlay
     const tabs = Array.from(overlay.querySelectorAll<HTMLButtonElement>('[role="tab"]'))
     const aiInput = overlay.querySelector<HTMLInputElement>('#ai-search-input')!
-    const preview = overlay.querySelector<HTMLDivElement>('#ai-search-preview')!
 
     const selectTab = (selected: HTMLButtonElement) => {
       this.request?.abort()
       this.request = undefined
+      if (this.aiRequest) this.resetAiSearch()
       for (const tab of tabs) {
         const active = tab === selected
         tab.setAttribute('aria-selected', String(active))
@@ -54,27 +55,66 @@ export class SearchDialog {
       })
     })
 
-    aiInput.addEventListener('input', () => { preview.hidden = true })
+    aiInput.addEventListener('input', () => this.resetAiSearch())
     overlay.querySelector('#ai-search-form')!.addEventListener('submit', (event) => {
       event.preventDefault()
       const query = aiInput.value.trim()
       if (!query) return
-      const title = document.createElement('strong')
-      title.textContent = 'Search preview'
-      const description = document.createElement('p')
-      description.textContent = `You asked: “${query}”`
-      const hint = document.createElement('p')
-      hint.textContent = 'Matching files will appear here with an explanation of why they fit your request.'
-      preview.replaceChildren(title, description, hint)
-      preview.hidden = false
+      void this.searchAi(query)
     })
     overlay.querySelectorAll<HTMLButtonElement>('.ai-search-examples button').forEach((button) => {
       button.addEventListener('click', () => {
         aiInput.value = button.textContent ?? ''
-        preview.hidden = true
+        this.resetAiSearch()
         aiInput.focus()
       })
     })
+  }
+
+  private resetAiSearch() {
+    this.aiRequest?.abort()
+    this.aiRequest = undefined
+    const overlay = this.elements.searchOverlay
+    overlay.querySelector<HTMLElement>('#ai-search-preview')!.hidden = true
+    const results = overlay.querySelector<HTMLUListElement>('#ai-search-results')!
+    results.replaceChildren()
+    results.hidden = true
+    overlay.querySelector<HTMLButtonElement>('.ai-search-submit')!.disabled = false
+    results.setAttribute('aria-busy', 'false')
+  }
+
+  private async searchAi(query: string) {
+    this.resetAiSearch()
+    const overlay = this.elements.searchOverlay
+    const status = overlay.querySelector<HTMLDivElement>('#ai-search-preview')!
+    const results = overlay.querySelector<HTMLUListElement>('#ai-search-results')!
+    const submit = overlay.querySelector<HTMLButtonElement>('.ai-search-submit')!
+    const request = new AbortController()
+    this.aiRequest = request
+    status.textContent = 'Searching…'
+    status.hidden = false
+    submit.disabled = true
+    results.setAttribute('aria-busy', 'true')
+
+    try {
+      const response = await searchFilesSemantic(query, undefined, request.signal)
+      if (this.aiRequest !== request) return
+      const matches = response.results ?? []
+      this.renderResults(matches, results, status)
+      status.textContent = response.message?.trim()
+        || (matches.length ? `Found ${matches.length} matching files.` : 'No matching files or folders.')
+      status.hidden = false
+    } catch (error) {
+      if (request.signal.aborted || this.aiRequest !== request) return
+      status.textContent = 'Unable to search right now. Please try again.'
+      console.error(error)
+    } finally {
+      if (this.aiRequest === request) {
+        this.aiRequest = undefined
+        submit.disabled = false
+        results.setAttribute('aria-busy', 'false')
+      }
+    }
   }
 
   private close() {
@@ -82,6 +122,7 @@ export class SearchDialog {
 
     this.request?.abort()
     this.request = undefined
+    this.resetAiSearch()
     
     searchOverlay.hidden = true
     document.body.classList.remove('search-open')
@@ -159,8 +200,11 @@ export class SearchDialog {
     }
   }
 
-  private renderResults(results: SearchResult[]) {
-    const { searchResults, searchStatus } = this.elements
+  private renderResults(
+    results: SearchResult[],
+    searchResults = this.elements.searchResults,
+    searchStatus: HTMLElement = this.elements.searchStatus,
+  ) {
 
     searchResults.replaceChildren()
 
@@ -198,6 +242,12 @@ export class SearchDialog {
       path.textContent = result.path ?? ''
       
       details.append(name, path)
+      if (result.matchReason) {
+        const reason = document.createElement('span')
+        reason.className = 'search-result-reason'
+        reason.textContent = result.matchReason
+        details.append(reason)
+      }
       button.append(icon, details)
       item.append(button)
       searchResults.append(item)

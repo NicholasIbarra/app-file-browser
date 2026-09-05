@@ -252,6 +252,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/search/semantic": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query: {
+                    query: string;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["SemanticFileSearchResponseDto"];
+                        "application/json": components["schemas"]["SemanticFileSearchResponseDto"];
+                        "text/json": components["schemas"]["SemanticFileSearchResponseDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/search": {
         parameters: {
             query?: never;
@@ -310,6 +350,7 @@ export interface components {
             path: string | null;
             isDirectory?: boolean;
             extension?: string | null;
+            matchReason?: string | null;
         };
         FileSystemEntryDto: {
             name?: string | null;
@@ -324,6 +365,10 @@ export interface components {
         };
         /** @enum {string} */
         FileSystemEntryType: "File" | "Directory";
+        SemanticFileSearchResponseDto: {
+            message?: string | null;
+            results?: components["schemas"]["FileSearchResultDto"][] | null;
+        };
     };
     responses: never;
     parameters: never;
