@@ -1,3 +1,5 @@
+﻿using System.Linq.Expressions;
+using FileBrowser.Application.Abtractstions.BackgroundJobs;
 using FileBrowser.Application.Abtractstions.FileSystem;
 using FileBrowser.Application.Browsing;
 using FileBrowser.Application.FileChanges;
@@ -10,13 +12,14 @@ public sealed class DirectoryBrowserServiceTests
 {
     private readonly IFileSystem _fileSystem;
     private readonly IPublisher _publisher;
+    private readonly IBackgroundJobManager _backgroundJobs = Substitute.For<IBackgroundJobManager>();
     private readonly DirectoryBrowserService _sut;
 
     public DirectoryBrowserServiceTests()
     {
         _fileSystem = Substitute.For<IFileSystem>();
         _publisher = Substitute.For<IPublisher>();
-        _sut = new DirectoryBrowserService(_fileSystem, _publisher);
+        _sut = new DirectoryBrowserService(_fileSystem, _publisher, _backgroundJobs);
     }
 
     [Theory]
@@ -240,31 +243,56 @@ public sealed class DirectoryBrowserServiceTests
     }
 
     [Fact]
-    public async Task UploadAsync_ForwardsRequestToFileSystem()
+    public async Task UploadAsync_ReturnsJobId_AndRunsAfterRequestStreamIsDisposed()
     {
-        await using var content = new MemoryStream("content"u8.ToArray());
+        Expression<Func<FileUploadJob, Task>>? queuedJob = null;
+        _backgroundJobs.Enqueue(Arg.Any<Expression<Func<FileUploadJob, Task>>>())
+            .Returns(call =>
+            {
+                queuedJob = call.Arg<Expression<Func<FileUploadJob, Task>>>();
+                return "job-123";
+            });
         using var cts = new CancellationTokenSource();
+        using (var content = new MemoryStream("content"u8.ToArray()))
+        {
+            Assert.Equal("job-123", await _sut.UploadAsync("/notes.txt", content, true, cts.Token));
+        }
+        cts.Cancel();
+        Assert.Empty(_fileSystem.ReceivedCalls());
+        Assert.Empty(_publisher.ReceivedCalls());
 
-        await _sut.UploadAsync("/notes.txt", content, overwrite: true, cts.Token);
+        byte[]? uploaded = null;
+        _fileSystem.UploadAsync("/notes.txt", Arg.Any<Stream>(), true, CancellationToken.None)
+            .Returns(async call =>
+            {
+                using var buffer = new MemoryStream();
+                await call.Arg<Stream>().CopyToAsync(buffer);
+                uploaded = buffer.ToArray();
+            });
+        Assert.NotNull(queuedJob);
+        await queuedJob.Compile()(new FileUploadJob(_fileSystem, _publisher));
 
-        await _fileSystem.Received(1).UploadAsync("/notes.txt", content, true, cts.Token);
-    }
-
-    [Fact]
-    public async Task UploadAsync_AfterUpload_PublishesFileCreatedEvent()
-    {
-        await using var content = new MemoryStream("content"u8.ToArray());
-        using var cts = new CancellationTokenSource();
-
-        await _sut.UploadAsync("/notes.txt", content, cancellationToken: cts.Token);
-
+        Assert.Equal("content"u8.ToArray(), uploaded);
         await _publisher.Received(1).Publish(
             Arg.Is<FileCreatedEvent>(notification => notification.Path == "/notes.txt"),
-            cts.Token);
+            CancellationToken.None);
     }
 
     [Fact]
-    public async Task UploadAsync_WhenUploadFails_DoesNotPublishFileCreatedEvent()
+    public async Task UploadAsync_WhenCancelled_DoesNotEnqueue()
+    {
+        using var content = new MemoryStream("content"u8.ToArray());
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            _sut.UploadAsync("/notes.txt", content, cancellationToken: cts.Token));
+
+        Assert.Empty(_backgroundJobs.ReceivedCalls());
+    }
+
+    [Fact]
+    public async Task FileUploadJob_WhenUploadFails_DoesNotPublishFileCreatedEvent()
     {
         _fileSystem
             .UploadAsync(
@@ -273,13 +301,12 @@ public sealed class DirectoryBrowserServiceTests
                 Arg.Any<bool>(),
                 Arg.Any<CancellationToken>())
             .Returns(Task.FromException(new IOException("Upload failed.")));
-        await using var content = new MemoryStream("content"u8.ToArray());
+        var job = new FileUploadJob(_fileSystem, _publisher);
 
-        await Assert.ThrowsAsync<IOException>(() => _sut.UploadAsync("/notes.txt", content));
+        await Assert.ThrowsAsync<IOException>(() =>
+            job.ExecuteAsync("/notes.txt", "content"u8.ToArray(), false, CancellationToken.None));
 
-        await _publisher.DidNotReceive().Publish(
-            Arg.Any<FileCreatedEvent>(),
-            Arg.Any<CancellationToken>());
+        Assert.Empty(_publisher.ReceivedCalls());
     }
 
     [Fact]

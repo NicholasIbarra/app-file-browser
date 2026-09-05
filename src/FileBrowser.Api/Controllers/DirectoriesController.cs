@@ -67,13 +67,13 @@ public class DirectoriesController : ControllerBase
         CancellationToken cancellationToken)
     {
         await using var content = file.OpenReadStream();
-        await _directoryBrowserService.UploadAsync(
+        var jobId = await _directoryBrowserService.UploadAsync(
             path,
             content,
             overwrite,
             cancellationToken);
 
-        return StatusCode(StatusCodes.Status201Created);
+        return Accepted(new { jobId });
     }
 
     [HttpDelete]

@@ -1,15 +1,20 @@
+using Azure.Storage.Blobs;
 using FileBrowser.Application;
+using FileBrowser.Application.Abtractstions.BackgroundJobs;
 using FileBrowser.Application.Abtractstions.FileSystem;
 using FileBrowser.Application.Abtractstions.Indexing;
 using FileBrowser.Application.Browsing;
 using FileBrowser.Application.Search;
+using FileBrowser.Infrastructure.BackgroundJobs;
 using FileBrowser.Infrastructure.BackgroundServices;
 using FileBrowser.Infrastructure.FileSystem;
 using FileBrowser.Infrastructure.Indexing;
-using Azure.Storage.Blobs;
+using Hangfire;
+using Hangfire.MemoryStorage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using System.Reflection;
 
 namespace FileBrowser.Infrastructure;
 
@@ -18,13 +23,16 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         IConfiguration configuration,
-        string contentRootPath)
+        string contentRootPath, 
+        Assembly apiAssembly
+        )
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
         ArgumentNullException.ThrowIfNull(contentRootPath);
 
         services.AddScoped<IDirectoryBrowserService, DirectoryBrowserService>();
+        services.AddScoped<FileUploadJob>();
         services.AddScoped<IFileSearchService, FileSearchService>();
         
         services.AddSingleton<IFileSearchIndex, FileSearchIndex>();
@@ -34,7 +42,18 @@ public static class DependencyInjection
         services.AddHostedService<FileIndexHostedService>();
 
         services.AddMediatR(configuration =>
-            configuration.RegisterServicesFromAssembly(typeof(FileBrowserApplication).Assembly));
+            configuration.RegisterServicesFromAssemblies([typeof(FileBrowserApplication).Assembly, apiAssembly]));
+
+        services.AddHangfire(configuration =>
+        {
+            configuration
+                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UseMemoryStorage();
+        });
+
+        services.AddScoped<IBackgroundJobManager, HangfireBackgroundJobManager>();
 
         var options = new FileBrowserOptions();
         configuration.GetSection(FileBrowserOptions.SectionName).Bind(options);
@@ -71,6 +90,9 @@ public static class DependencyInjection
                 throw new NotSupportedException(
                     $"Unknown file system provider '{options.Provider}'.");
         }
+
+
+
 
         return services;
     }
