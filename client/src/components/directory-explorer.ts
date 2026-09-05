@@ -14,6 +14,8 @@ import type { AppShell } from './app-shell'
 export class DirectoryExplorer {
   private readonly elements: AppShell
   private currentPath = '/'
+  private requestedPath: string | undefined
+  private loadVersion = 0
 
   constructor(elements: AppShell) {
     this.elements = elements
@@ -30,6 +32,9 @@ export class DirectoryExplorer {
   }
 
   async load(path?: string, urlMode: NavigationMode = 'none') {
+    this.requestedPath = path
+    const version = ++this.loadVersion
+    if (urlMode !== 'none') updateUrl(path, urlMode)
     const { entries, status } = this.elements
     
     // Set loading state
@@ -39,19 +44,20 @@ export class DirectoryExplorer {
    
     try {
       const contents = await getDirectory(path)
+      if (version !== this.loadVersion) return
       this.currentPath = contents.path || '/'
-      
-      if (urlMode !== 'none') {
-        // Push to browser stack for back button support
-        updateUrl(path, urlMode)
-      }
       
       this.render(contents, path !== undefined)
       entries.hidden = false
     } catch (error) {
+      if (version !== this.loadVersion) return
       status.textContent = 'Unable to load this directory.'
       console.error(error)
     }
+  }
+
+  refresh() {
+    return this.load(this.requestedPath)
   }
 
   private async uploadSelectedFiles() {
@@ -70,7 +76,8 @@ export class DirectoryExplorer {
         await uploadFile(this.joinPath(this.currentPath, file.name), file)
       }
 
-      await this.load(this.currentPath)
+      // let signalr push to the client
+      // await this.load(this.currentPath)
     } catch (error) {
       this.showStatus('Unable to upload the selected file. It may already exist.')
       console.error(error)

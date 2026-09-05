@@ -1,5 +1,6 @@
 ﻿using FileBrowser.Application.Abtractstions.FileSystem;
 using FileBrowser.Application.FileChanges;
+using FileBrowser.Application.Abtractstions.BackgroundJobs;
 using MediatR;
 
 namespace FileBrowser.Application.Browsing;
@@ -8,11 +9,13 @@ public class DirectoryBrowserService : IDirectoryBrowserService
 {
     private readonly IFileSystem _fileSystem;
     private readonly IPublisher _publisher;
+    private readonly IBackgroundJobManager _backgroundJobs;
 
-    public DirectoryBrowserService(IFileSystem fileSystem, IPublisher publisher)
+    public DirectoryBrowserService(IFileSystem fileSystem, IPublisher publisher, IBackgroundJobManager backgroundJobs)
     {
         _fileSystem = fileSystem;
         _publisher = publisher;
+        _backgroundJobs = backgroundJobs;
     }
 
     public async Task<DirectoryContentsDto> GetDirectoryContentsAsync(
@@ -52,7 +55,7 @@ public class DirectoryBrowserService : IDirectoryBrowserService
         return new FileDownloadDto(file.Name, content);
     }
 
-    public async Task UploadAsync(
+    public async Task<string> UploadAsync(
         string path,
         Stream content,
         bool overwrite = false,
@@ -61,8 +64,14 @@ public class DirectoryBrowserService : IDirectoryBrowserService
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         ArgumentNullException.ThrowIfNull(content);
 
-        await _fileSystem.UploadAsync(path, content, overwrite, cancellationToken);
-        await _publisher.Publish(new FileCreatedEvent(path), cancellationToken);
+        // Persist bytes rather than the stream, which is disposed after the request.
+        using var buffer = new MemoryStream();
+        await content.CopyToAsync(buffer, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        var bytes = buffer.ToArray();
+
+        return _backgroundJobs.Enqueue<FileUploadJob>(job =>
+            job.ExecuteAsync(path, bytes, overwrite, CancellationToken.None));
     }
 
     public async Task DeleteAsync(

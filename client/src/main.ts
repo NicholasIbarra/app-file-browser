@@ -1,4 +1,5 @@
 import './style.css'
+import { connectFileHub } from './api/file-hub'
 import { renderAppShell } from './components/app-shell'
 import { DirectoryExplorer } from './components/directory-explorer'
 import { SearchDialog } from './components/search-dialog'
@@ -26,3 +27,6 @@ window.addEventListener(
     () => void explorer.load(getUrlPath()))
 
 void explorer.load(getUrlPath())
+
+const disconnectFileHub = connectFileHub(() => explorer.refresh())
+import.meta.hot?.dispose(disconnectFileHub)
