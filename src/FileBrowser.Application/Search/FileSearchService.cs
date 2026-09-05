@@ -11,7 +11,6 @@ namespace FileBrowser.Application.Search;
 public class FileSearchService : IFileSearchService
 {
     private readonly IFileSearchIndex _searchIndex;
-
     private readonly IFileSearchScorer _searchScorer;
     private readonly ICosineSimilarity _cosineSimilarity;
     private readonly IEmbeddingService _embeddingService;
