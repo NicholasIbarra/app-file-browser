@@ -8,6 +8,7 @@ import {
   type DirectoryContents,
 } from '../api'
 import { formatFileSize } from '../utils/file-size'
+import { notyf } from '../utils/notifications'
 import { getParentPath, getPathBreadcrumbs, updateUrl, type NavigationMode } from '../utils/navigation'
 import type { AppShell } from './app-shell'
 
@@ -95,6 +96,7 @@ export class DirectoryExplorer {
 
     await this.runOperation(
       'Moving…',
+      'File moved successfully.',
       'Unable to move this item.',
       () => moveEntry({ sourcePath: path, destinationPath, overwrite: false }),
     )
@@ -106,6 +108,7 @@ export class DirectoryExplorer {
 
     await this.runOperation(
       'Copying…',
+      'File copied successfully.',
       'Unable to copy this item.',
       () => copyEntry({ sourcePath: path, destinationPath, overwrite: false }),
     )
@@ -119,6 +122,7 @@ export class DirectoryExplorer {
 
     await this.runOperation(
       'Deleting…',
+      isDirectory ? 'Directory deleted successfully.' : 'File deleted successfully.',
       'Unable to delete this item.',
       () => deleteEntry(path, isDirectory),
     )
@@ -153,6 +157,7 @@ export class DirectoryExplorer {
 
   private async runOperation(
     pendingMessage: string,
+    successMessage: string,
     errorMessage: string,
     operation: () => Promise<void>,
   ) {
@@ -160,6 +165,7 @@ export class DirectoryExplorer {
     this.showStatus(pendingMessage)
     try {
       await operation()
+      notyf.success(successMessage)
       await this.load(this.currentPath)
     } catch (error) {
       this.showStatus(errorMessage)

@@ -1,10 +1,8 @@
 import { HubConnectionBuilder } from '@microsoft/signalr'
-import { Notyf } from 'notyf'
-import 'notyf/notyf.min.css'
+import { notyf } from '../utils/notifications'
 import { apiBaseUrl } from './http-client'
 
 export function connectFileHub(refresh: () => Promise<void>) {
-  const notyf = new Notyf()
   const connection = new HubConnectionBuilder()
     .withUrl(`${apiBaseUrl.replace(/\/$/, '')}/hubs/files`, { withCredentials: false })
     .withAutomaticReconnect()
