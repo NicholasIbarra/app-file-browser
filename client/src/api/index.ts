@@ -11,3 +11,5 @@ export type { DirectoryContents, FileOperationRequest } from './services/directo
 export { searchFiles, searchFilesSemantic } from './services/search-service.ts'
 export type { SearchResult, SemanticSearchResponse } from './services/search-service.ts'
 export { httpClient } from './http-client.ts'
+export { getSettings } from './services/settings-service.ts'
+export type { SettingsResponse } from './services/settings-service.ts'

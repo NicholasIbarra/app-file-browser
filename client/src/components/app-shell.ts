@@ -43,7 +43,7 @@ export function renderAppShell(root: HTMLDivElement): AppShell {
         <h2 id="search-title" class="visually-hidden">Search files</h2>
         <div class="search-tabs" role="tablist" aria-label="Search mode">
           <button id="file-search-tab" type="button" role="tab" aria-selected="true" aria-controls="file-search-panel">Search</button>
-          <button id="ai-search-tab" type="button" role="tab" aria-selected="false" aria-controls="ai-search-panel" tabindex="-1">AI Search</button>
+          <button id="ai-search-tab" type="button" role="tab" aria-selected="false" aria-controls="ai-search-panel" tabindex="-1" hidden>AI Search</button>
         </div>
         <div id="file-search-panel" role="tabpanel" aria-labelledby="file-search-tab">
         <div class="search-field">

@@ -42,7 +42,8 @@ public static class DependencyInjection
         services.AddScoped<IDirectoryBrowserService, DirectoryBrowserService>();
         services.AddScoped<FileUploadJob>();
         services.AddScoped<IFileSearchService, FileSearchService>();
-        
+        services.AddScoped<IFileService, FileService>();
+
         services.AddSingleton<IFileSearchIndex, FileSearchIndex>();
         services.AddSingleton<IFileSearchScorer, FileSearchScorer>();
         services.AddSingleton<ICosineSimilarity, CosineSimilarity>();
