@@ -11,6 +11,39 @@ namespace FileBrowser.Infrastructure.Tests.Indexing;
 
 public sealed class FileSearchIndexTests : IDisposable
 {
+    [Theory]
+    [InlineData(1000, true, true)]
+    [InlineData(1001, true, false)]
+    [InlineData(1000, false, false)]
+    public async Task RebuildAsync_RespectsEmbeddingFileLimit(int fileCount, bool enabled, bool expectEmbeddings)
+    {
+        var modified = DateTimeOffset.UtcNow;
+        var files = Enumerable.Range(0, fileCount)
+            .Select(i => new FileItem($"file-{i}.txt", $"/folder/file-{i}.txt",
+                FileSystemEntryType.File, 1, null, modified))
+            .Prepend(new FileItem("folder", "/folder", FileSystemEntryType.Directory, null, null, modified))
+            .ToArray();
+        var fileSystem = Substitute.For<IFileSystem>();
+        fileSystem.GetAllDirectoryContentsAsync("/", Arg.Any<CancellationToken>()).Returns(files);
+        var embeddings = Substitute.For<IEmbeddingService>();
+        embeddings.GenerateAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(call => call.Arg<IReadOnlyList<string>>()
+                .ToDictionary(input => input, _ => new float[] { 1, 0 }));
+        using var sut = new FileSearchIndex(fileSystem, embeddings,
+            Options.Create(new AzureOpenAiOptions { Enabled = enabled }),
+            NullLogger<FileSearchIndex>.Instance);
+
+        await sut.RebuildAsync(CancellationToken.None);
+
+        Assert.Equal(fileCount + 1, sut.Snapshot.Count);
+        Assert.All(sut.Snapshot, entry => Assert.Equal(expectEmbeddings, entry.Embedding is not null));
+        if (!expectEmbeddings)
+        {
+            await embeddings.DidNotReceive().GenerateAsync(
+                Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>());
+        }
+    }
+
     [Fact]
     public async Task RebuildAsync_IncludesSizeAndDateInSemanticIndex()
     {

@@ -29,6 +29,8 @@ At startup, [FileIndexHostedService](src/FileBrowser.Infrastructure/BackgroundSe
 
 The index is rebuilt on application startup and is not persisted.
 
+TODO (known POC limitation): Embedding generation is disabled when a rebuild contains more than 1,000 files, even when `OpenAI:AzureOpenAI:Enabled` is enabled. This bounds startup time and API costs until persistent, incremental embedding indexing is supported. Folders do not count toward the limit; the metadata index remains available for text search.
+
 [FileSearchScorer](src/FileBrowser.Application/Search/Scorer/FileSearchScorer.cs) uses the first matching rule, ignoring case:
 
 | Match | Score |

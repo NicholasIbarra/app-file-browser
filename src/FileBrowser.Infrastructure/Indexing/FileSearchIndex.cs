@@ -16,6 +16,7 @@ public class FileSearchIndex : IFileSearchIndex, IDisposable
         Array.Empty<FileIndexEntry>();
 
     private const int MAX_EMBEDDING_BATCH_SIZE = 500;
+    private const int MAX_EMBEDDING_FILE_COUNT = 1000;
 
     private readonly IFileSystem _fileSystem;
 
@@ -154,7 +155,12 @@ public class FileSearchIndex : IFileSearchIndex, IDisposable
 
         var entries = contents.Select(Map).ToArray();
 
-        return _embeddingEnabled
+        // TODO: Known POC limitation: skip embeddings above 1,000 files to bound
+        // startup time and API costs until persistent, incremental embedding indexing is supported.
+        var embeddingEnabled = _embeddingEnabled
+            && entries.Count(entry => !entry.IsDirectory) <= MAX_EMBEDDING_FILE_COUNT;
+
+        return embeddingEnabled
             ? await GenerateEmbeddings(entries, cancellationToken)
             : entries;
     }
