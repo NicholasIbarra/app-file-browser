@@ -113,8 +113,20 @@ public static class DependencyInjection
         configuration.GetSection(AzureOpenAiOptions.SectionName).Bind(options);
         services.AddSingleton(Options.Create(options));
 
+        if (!options.Enabled)
+        {
+            // No Endpoint/Key is required when AI features are disabled, so
+            // don't attempt to construct an Azure OpenAI client from them.
+            // Consumers (FileSearchIndex, FileSearchService) already check
+            // AzureOpenAiOptions.Enabled before calling these services.
+            services.AddSingleton<IEmbeddingService, DisabledEmbeddingService>();
+            services.AddSingleton<IChatClient, DisabledChatClient>();
+
+            return services;
+        }
+
         var azureOpenAiClient = new AzureOpenAIClient(
-            new Uri(options.Endpoint), 
+            new Uri(options.Endpoint),
             new Azure.AzureKeyCredential(options.Key));
 
         var embeddingClient = azureOpenAiClient.GetEmbeddingClient(options.EmbeddingModel);

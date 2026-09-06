@@ -13,7 +13,7 @@ public sealed class FileUploadJob(IFileSystem fileSystem, IPublisher publisher)
         CancellationToken cancellationToken)
     {
         // artificial delay to simulate a long-running upload process
-        Task.Delay(5000, cancellationToken).Wait(cancellationToken);
+        await Task.Delay(5000, cancellationToken);
 
         using var stream = new MemoryStream(content, writable: false);
 
