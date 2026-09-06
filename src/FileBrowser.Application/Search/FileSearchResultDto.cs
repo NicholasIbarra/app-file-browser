@@ -12,6 +12,10 @@ public sealed class FileSearchResultDto
 
     public string? Extension { get; init; }
 
+    public long? Size { get; init; }
+
+    public DateTimeOffset LastModified { get; init; }
+
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public string? MatchReason { get; init; }
 }

@@ -126,19 +126,29 @@ public sealed class FileSearchServiceTests
     {
         float[] queryEmbedding = [1, 0];
         var first = CreateEntry("first.txt") with { Embedding = [1, 0] };
-        var second = CreateEntry("second.txt") with { Embedding = [0, 1] };
+        var second = CreateEntry("second.txt") with
+        {
+            Embedding = [0, 1], Size = 1048576,
+            LastModified = new DateTimeOffset(2026, 9, 5, 12, 0, 0, TimeSpan.Zero)
+        };
         _searchIndex.Snapshot.Returns([first, second]);
         _chat.GetResponseAsync(
                 Arg.Any<IEnumerable<ChatMessage>>(), Arg.Any<ChatOptions?>(), Arg.Any<CancellationToken>())
             .Returns(new ChatResponse(new ChatMessage(ChatRole.Assistant, "query")));
-        _embeddings.GenerateAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
-            .Returns(new Dictionary<string, float[]> { ["query"] = queryEmbedding });
+        _embeddings.GenerateAsync("query", Arg.Any<CancellationToken>())
+            .Returns(queryEmbedding);
         _cosineSimilarity.Calculate(queryEmbedding, first.Embedding!).Returns(0.1);
         _cosineSimilarity.Calculate(queryEmbedding, second.Embedding!).Returns(0.9);
 
         var result = await _sut.SearchSemanticAsync("query");
 
         Assert.Equal(["second.txt", "first.txt"], result.Results.Select(item => item.Name));
+        Assert.Equal(second.Size, result.Results[0].Size);
+        Assert.Equal(second.LastModified, result.Results[0].LastModified);
+        Assert.NotEmpty(result.Results[0].MatchReason!);
+        var summary = new FileSearchPromptBuilder().BuildResultsSummaryPrompt("query", result.Results);
+        Assert.Contains("\"Size\":1048576", summary[1].Text);
+        Assert.Contains("2026-09-05T12:00:00", summary[1].Text);
         _cosineSimilarity.Received(1).Calculate(queryEmbedding, first.Embedding!);
         _cosineSimilarity.Received(1).Calculate(queryEmbedding, second.Embedding!);
     }

@@ -11,6 +11,35 @@ namespace FileBrowser.Infrastructure.Tests.Indexing;
 
 public sealed class FileSearchIndexTests : IDisposable
 {
+    [Fact]
+    public async Task RebuildAsync_IncludesSizeAndDateInSemanticIndex()
+    {
+        var modified = new DateTimeOffset(2026, 9, 5, 12, 0, 0, TimeSpan.Zero);
+        var fileSystem = Substitute.For<IFileSystem>();
+        fileSystem.GetAllDirectoryContentsAsync("/", Arg.Any<CancellationToken>())
+            .Returns([new FileItem("report.pdf", "/report.pdf", FileSystemEntryType.File,
+                1048576, null, modified)]);
+        var embeddings = Substitute.For<IEmbeddingService>();
+        embeddings.GenerateAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(call => call.Arg<IReadOnlyList<string>>()
+                .ToDictionary(input => input, _ => new float[] { 1, 0 }));
+        using var sut = new FileSearchIndex(fileSystem, embeddings,
+            Options.Create(new AzureOpenAiOptions { Enabled = true }),
+            NullLogger<FileSearchIndex>.Instance);
+
+        await sut.RebuildAsync(CancellationToken.None);
+
+        var entry = Assert.Single(sut.Snapshot);
+        Assert.Equal(1048576, entry.Size);
+        Assert.Equal(modified, entry.LastModified);
+        Assert.Equal(new float[] { 1, 0 }, entry.Embedding);
+        await embeddings.Received(1).GenerateAsync(
+            Arg.Is<IReadOnlyList<string>>(inputs =>
+                inputs.Single().Contains("1048576 bytes (1024 KB, 1 MB") &&
+                inputs.Single().Contains("2026-09-05T12:00:00")),
+            Arg.Any<CancellationToken>());
+    }
+
     private readonly string _rootPath = Path.Combine(
         Path.GetTempPath(),
         $"file-browser-index-tests-{Guid.NewGuid():N}");

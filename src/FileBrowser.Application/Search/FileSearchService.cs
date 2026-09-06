@@ -196,6 +196,8 @@ public class FileSearchService : IFileSearchService
             Path = entry.RelativePath,
             IsDirectory = entry.IsDirectory,
             Extension = entry.Extension,
+            Size = entry.Size,
+            LastModified = entry.LastModified,
             MatchReason = matchReason
         };
     }

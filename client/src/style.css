@@ -312,7 +312,7 @@ kbd {
   font-size: 0.8rem;
 }
 
-.search-result-details .search-result-reason {
+.search-result-details .search-result-metadata {
   white-space: normal;
   overflow-wrap: anywhere;
   margin-top: 4px;

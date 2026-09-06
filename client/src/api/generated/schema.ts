@@ -403,6 +403,8 @@ export interface components {
             path: string | null;
             isDirectory?: boolean;
             extension?: string | null;
+            size?: number | null;
+            lastModified?: string;
             matchReason?: string | null;
         };
         FileSystemEntryDto: {

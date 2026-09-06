@@ -6,4 +6,6 @@ public sealed record FileIndexEntry(
     string FullPath,
     bool IsDirectory,
     string? Extension,
-    float[]? Embedding);
+    float[]? Embedding,
+    long? Size = null,
+    DateTimeOffset LastModified = default);

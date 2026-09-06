@@ -1,5 +1,6 @@
 import { getSettings, searchFiles, searchFilesSemantic, type SearchResult } from '../api'
 import { getParentPath } from '../utils/navigation'
+import { formatFileSize } from '../utils/file-size'
 import type { AppShell } from './app-shell'
 
 export class SearchDialog {
@@ -306,11 +307,21 @@ export class SearchDialog {
       path.textContent = result.path ?? ''
       
       details.append(name, path)
-      if (result.matchReason) {
-        const reason = document.createElement('span')
-        reason.className = 'search-result-reason'
-        reason.textContent = result.matchReason
-        details.append(reason)
+      const metadata: string[] = []
+      if (!result.isDirectory && result.size != null) {
+        metadata.push(formatFileSize(result.size))
+      }
+      if (result.lastModified) {
+        const modified = new Date(result.lastModified)
+        if (!Number.isNaN(modified.getTime())) {
+          metadata.push(`Modified ${modified.toLocaleString()}`)
+        }
+      }
+      if (metadata.length) {
+        const values = document.createElement('span')
+        values.className = 'search-result-metadata'
+        values.textContent = metadata.join(' · ')
+        details.append(values)
       }
       button.append(icon, details)
       item.append(button)

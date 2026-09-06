@@ -212,6 +212,8 @@ public class FileSearchIndex : IFileSearchIndex, IDisposable
         Path: {entry.RelativePath}
         Type: {(entry.IsDirectory ? "Directory" : "File")}
         Extension: {entry.Extension}
+        Size: {(entry.Size is { } size ? FormattableString.Invariant($"{size} bytes ({size / 1024d:0.##} KB, {size / 1048576d:0.##} MB, {size / 1073741824d:0.##} GB)") : "Not applicable")}
+        Last modified: {entry.LastModified:O}
         """;
     }
 
@@ -240,7 +242,9 @@ public class FileSearchIndex : IFileSearchIndex, IDisposable
             FullPath: entry.Path,
             IsDirectory: isDirectory,
             Extension: isDirectory ? null : Path.GetExtension(entry.Name),
-            null);
+            Embedding: null,
+            Size: entry.Size,
+            LastModified: entry.LastModified);
     }
 
     private async Task<IReadOnlyList<FileIndexEntry>> BuildEntriesAsync(
