@@ -1,5 +1,6 @@
 ﻿using FileBrowser.Application.Abtractstions.BackgroundJobs;
 using FileBrowser.Application.Abtractstions.FileSystem;
+using FileBrowser.Application.Files.BackgroundJobs;
 using FileBrowser.Application.Files.Events;
 using MediatR;
 
@@ -48,6 +49,8 @@ public  class FileService : IFileService
         ArgumentNullException.ThrowIfNull(content);
 
         // Persist bytes rather than the stream, which is disposed after the request.
+
+
         using var buffer = new MemoryStream();
         await content.CopyToAsync(buffer, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
@@ -106,4 +109,12 @@ public  class FileService : IFileService
         await _publisher.Publish(new FileCopiedEvent(destinationPath), cancellationToken);
     }
 
+    public async Task<string> RenameAsync(string sourcePath, string newName, bool overwrite = false, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newName);
+
+        return _backgroundJobs.Enqueue<FileRenameJob>(job =>
+            job.ExecuteAsync(sourcePath, newName, overwrite, CancellationToken.None));
+    }
 }

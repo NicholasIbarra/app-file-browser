@@ -2,7 +2,7 @@ using FileBrowser.Application.Abtractstions.FileSystem;
 using FileBrowser.Application.Files.Events;
 using MediatR;
 
-namespace FileBrowser.Application.Files;
+namespace FileBrowser.Application.Files.BackgroundJobs;
 
 public sealed class FileUploadJob(IFileSystem fileSystem, IPublisher publisher)
 {

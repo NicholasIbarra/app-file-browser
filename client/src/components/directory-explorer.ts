@@ -11,6 +11,7 @@ import { formatFileSize } from '../utils/file-size'
 import { notyf } from '../utils/notifications'
 import { getParentPath, getPathBreadcrumbs, updateUrl, type NavigationMode } from '../utils/navigation'
 import type { AppShell } from './app-shell'
+import { renameEntry } from '../api/services/files-service'
 
 export class DirectoryExplorer {
   private readonly elements: AppShell
@@ -106,6 +107,22 @@ export class DirectoryExplorer {
     )
   }
 
+  private async rename(path: string) {
+    const destinationPath = window.prompt('Rename to path:', path)
+    if (!destinationPath || destinationPath === path) {
+      return
+    }
+    
+    this.showStatus(`Renaming ${path}...`)
+
+    await this.runOperation(
+      'Renaming…',
+      undefined,
+      'Unable to rename this item.',
+      () => renameEntry({ sourcePath: path, destinationPath, overwrite: false }),
+    )
+  }
+
   private async copy(path: string) {
     const destinationPath = window.prompt('Copy to path:', `${path}-copy`)
     if (!destinationPath || destinationPath === path) return
@@ -161,7 +178,7 @@ export class DirectoryExplorer {
 
   private async runOperation(
     pendingMessage: string,
-    successMessage: string,
+    successMessage: string | undefined,
     errorMessage: string,
     operation: () => Promise<void>,
   ) {
@@ -169,7 +186,7 @@ export class DirectoryExplorer {
     this.showStatus(pendingMessage)
     try {
       await operation()
-      notyf.success(successMessage)
+      successMessage && notyf.success(successMessage)
       await this.loadDirectoryItems(this.currentPath)
     } catch (error) {
       this.showStatus(errorMessage)
@@ -340,6 +357,7 @@ export class DirectoryExplorer {
         menu.append(
           this.createAction('Move', () => this.move(entry.path!), undefined, actions),
           this.createAction('Copy', () => this.copy(entry.path!), undefined, actions),
+          this.createAction('Rename', () => this.rename(entry.path!), undefined, actions),
           this.createAction('Delete', () => this.delete(entry.path!, entry.type === 'Directory'), 'danger', actions),
         )
         actions.append(toggle, menu)

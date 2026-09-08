@@ -215,8 +215,10 @@ public class LocalFileSystem : IFileSystem
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        
         var source = _pathResolver.Resolve(sourcePath);
         var destination = _pathResolver.Resolve(destinationPath);
+
         EnsureNotRoot(source);
         EnsureParentDirectoryExists(destination);
 
@@ -321,6 +323,7 @@ public class LocalFileSystem : IFileSystem
     private static void EnsureParentDirectoryExists(string path)
     {
         var parent = Path.GetDirectoryName(path);
+
         if (parent is null || !Directory.Exists(parent))
         {
             throw new DirectoryNotFoundException($"The destination directory for '{path}' was not found.");
@@ -380,5 +383,11 @@ public class LocalFileSystem : IFileSystem
         return directoryInfo.Exists
             ? directoryInfo.EnumerateFileSystemInfos().Count()
             : null;
+    }
+
+    public Task RenameAsync(string sourcePath, string newName, bool overwrite = false, CancellationToken cancellationToken = default)
+    {
+        // Rename is implemented as a move operation to the same directory with a new name.
+        return MoveAsync(sourcePath, Path.Combine(Path.GetDirectoryName(sourcePath) ?? string.Empty, newName), overwrite, cancellationToken);
     }
 }

@@ -2,6 +2,7 @@
 using FileBrowser.Application.Abtractstions.FileSystem;
 using FileBrowser.Application.Browsing;
 using FileBrowser.Application.Files;
+using FileBrowser.Application.Files.BackgroundJobs;
 using FileBrowser.Application.Files.Events;
 using MediatR;
 using NSubstitute;

@@ -7,6 +7,7 @@ using FileBrowser.Application.Abtractstions.FileSystem;
 using FileBrowser.Application.Abtractstions.Indexing;
 using FileBrowser.Application.Browsing;
 using FileBrowser.Application.Files;
+using FileBrowser.Application.Files.BackgroundJobs;
 using FileBrowser.Application.Search;
 using FileBrowser.Application.Search.Prompts;
 using FileBrowser.Application.Search.Scorer;

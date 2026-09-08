@@ -247,6 +247,11 @@ public sealed class AzureFileSystem : IFileSystem
             if (seen.Add(name)) entries.Add(MapDirectory(name));
         }
     }
+    public Task RenameAsync(string sourcePath, string newName, bool overwrite = false, CancellationToken cancellationToken = default)
+    {
+        // Rename is implemented as a move operation to the same directory with a new name.
+        return MoveAsync(sourcePath, Path.Combine(Path.GetDirectoryName(sourcePath) ?? string.Empty, newName), overwrite, cancellationToken);
+    }
 
     private string ToBlobName(string path) => _rootPrefix + path;
     private string ToDirectoryPrefix(string path) => path.Length == 0 ? _rootPrefix : ToBlobName(path) + "/";

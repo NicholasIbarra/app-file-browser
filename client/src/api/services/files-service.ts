@@ -49,4 +49,8 @@ export async function copyEntry(request: FileOperationRequest): Promise<void> {
   await httpClient.post('/api/files/copy', request)
 }
 
+export async function renameEntry(request: FileOperationRequest): Promise<void> {
+  await httpClient.post('/api/files/rename', request)
+}
+
 export type { FileOperationRequest }

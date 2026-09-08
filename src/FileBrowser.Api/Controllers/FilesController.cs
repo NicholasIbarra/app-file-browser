@@ -87,4 +87,18 @@ public class FilesController : ControllerBase
 
         return NoContent();
     }
+
+    [HttpPost("rename")]
+    public async Task<IActionResult> RenameAsync(
+        [FromBody] FileOperationRequest request,
+        CancellationToken cancellationToken)
+    {
+        var jobId = await _fileService.RenameAsync(
+            request.SourcePath,
+            request.DestinationPath,
+            request.Overwrite,
+            cancellationToken);
+
+        return Accepted(new { jobId });
+    }
 }

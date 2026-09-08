@@ -23,6 +23,12 @@ export function connectFileHub(refresh: () => Promise<void>) {
     refreshContents()
   })
 
+
+  connection.on('FileRenameCompleted', (_path: string, _newPath) => {
+    notyf.success('File rename successfully.')
+    refreshContents()
+  })
+
   connection.onreconnected(refreshContents)
   connection.onclose(() => {
     if (!disposed) {

@@ -7,4 +7,6 @@ public interface IFileService
     Task DeleteAsync(string path, bool recursive = false, CancellationToken cancellationToken = default);
     Task MoveAsync(string sourcePath, string destinationPath, bool overwrite = false, CancellationToken cancellationToken = default);
     Task CopyAsync(string sourcePath, string destinationPath, bool overwrite = false, CancellationToken cancellationToken = default);
+
+    Task<string> RenameAsync(string sourcePath, string newName, bool overwrite = false, CancellationToken cancellationToken = default);
 }

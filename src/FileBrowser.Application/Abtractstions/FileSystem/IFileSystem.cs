@@ -44,4 +44,10 @@ public interface IFileSystem
         string destinationPath,
         bool overwrite = false,
         CancellationToken cancellationToken = default);
+
+    Task RenameAsync(
+        string sourcePath,
+        string newName,
+        bool overwrite = false,
+        CancellationToken cancellationToken = default);
 }
