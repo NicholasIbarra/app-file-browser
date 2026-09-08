@@ -2,10 +2,13 @@ import { getSettings, searchFiles, searchFilesSemantic, type SearchResult } from
 import { getParentPath } from '../utils/navigation'
 import { formatFileSize } from '../utils/file-size'
 import type { AppShell } from './app-shell'
+import debounce from 'lodash/debounce'
+import type { components } from '../api/generated/schema'
 
 export class SearchDialog {
   private request?: AbortController
   private aiRequest?: AbortController
+
   private semanticSearchEnabled = false
   private readonly elements: AppShell
   private readonly navigate: (path?: string) => void
@@ -18,7 +21,34 @@ export class SearchDialog {
     void this.loadSettings()
     
     elements.searchButton.addEventListener('click', () => this.open())
-    elements.searchInput.addEventListener('input', () => void this.search(elements.searchInput.value))
+    elements.searchInput.addEventListener('input', () => {
+      this.request?.abort();
+      this.request = undefined;
+
+      const query = elements.searchInput.value;
+
+      if (!query.trim()) {
+        this.searchDebounce?.cancel();
+        this.search('');
+      }
+
+      void this.searchDebounce(elements.searchInput.value)
+    })
+
+    elements.searchFilter.addEventListener('change', () => {
+      this.request?.abort();
+      this.request = undefined;
+
+      const query = elements.searchInput.value;
+
+      if (!query.trim()) {
+        this.searchDebounce?.cancel();
+        this.search('');
+      }
+
+      void this.searchDebounce(elements.searchInput.value)
+    })
+
     elements.searchOverlay.addEventListener('click', (event) => {
       if (event.target === elements.searchOverlay) {
         this.close()
@@ -218,11 +248,15 @@ export class SearchDialog {
     }
   }
 
+  private readonly searchDebounce = debounce((query : string) => {
+    void this.search(query)
+  }, 1000);
+
   private async search(query: string) {
     this.request?.abort()
 
     const normalized = query.trim()
-    const { searchResults, searchStatus } = this.elements
+    const { searchResults, searchStatus, searchFilter } = this.elements
 
     if (!normalized) {
       this.request = undefined
@@ -243,7 +277,11 @@ export class SearchDialog {
     searchStatus.textContent = 'Searching…'
 
     try {
-      const results = await searchFiles(normalized, undefined, request.signal)
+      const results = await searchFiles(
+        normalized,
+        undefined, 
+        this.mapFilterType(searchFilter.value),
+        request.signal)
 
       if (this.request === request) {
         this.renderResults(results)
@@ -262,6 +300,17 @@ export class SearchDialog {
       if (this.request === request) {
         this.request = undefined
       }
+    }
+  }
+
+  private mapFilterType(input : string | undefined) : components["schemas"]["SearchItemType"] | undefined {
+    switch (input) {
+      case '0' :
+        return undefined
+      case '1':
+        return 'File'
+      case '2':
+        return 'Directory'        
     }
   }
 

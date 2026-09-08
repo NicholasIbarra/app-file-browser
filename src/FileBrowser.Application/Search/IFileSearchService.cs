@@ -13,5 +13,6 @@ public interface IFileSearchService
     IReadOnlyList<FileSearchResultDto> SearchAsync(
         string query,
         int limit = 50,
+        SearchItemType? searchItemType = null,
         CancellationToken cancellationToken = default);
 }

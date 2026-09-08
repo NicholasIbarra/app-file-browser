@@ -13,23 +13,25 @@ function getInitialTheme(): Theme {
 }
 
 export function initializeThemeToggle(button: HTMLButtonElement) {
-  function applyTheme(theme: Theme) {
-    const isDark = theme === 'dark'
-    document.documentElement.dataset.theme = theme
-    const nextThemeLabel = isDark ? 'Light mode' : 'Dark mode'
-    button.textContent = isDark ? '☀️' : '🌙'
-    button.setAttribute('aria-label', nextThemeLabel)
-    button.title = nextThemeLabel
-    button.setAttribute('aria-pressed', String(isDark))
-  }
-
-  applyTheme(getInitialTheme())
+  applyTheme(getInitialTheme(), button)
 
   button.addEventListener('click', () => {
     const nextTheme: Theme =
       document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'
 
     localStorage.setItem(themeKey, nextTheme)
-    applyTheme(nextTheme)
+    applyTheme(nextTheme, button)
   })
 }
+
+function applyTheme(theme: Theme, button: HTMLButtonElement) {
+    const isDark = theme === 'dark'
+    document.documentElement.dataset.theme = theme
+
+    const nextThemeLabel = isDark ? 'Light mode' : 'Dark mode'
+    
+    button.textContent = isDark ? '☀️' : '🌙'
+    button.setAttribute('aria-label', nextThemeLabel)
+    button.title = nextThemeLabel
+    button.setAttribute('aria-pressed', String(isDark))
+  }

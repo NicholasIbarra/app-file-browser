@@ -95,6 +95,25 @@ public sealed class FileSearchServiceTests
         Assert.Equal("higher.txt", Assert.Single(result).Name);
     }
 
+    [Theory]
+    [InlineData(SearchItemType.File, false)]
+    [InlineData(SearchItemType.Directory, true)]
+    public void SearchAsync_FiltersByItemType(SearchItemType searchItemType, bool expectedIsDirectory)
+    {
+        var fileEntry = CreateEntry("file.txt");
+        var directoryEntry = CreateEntry("directory") with { IsDirectory = true };
+
+        _searchIndex.Snapshot.Returns([fileEntry, directoryEntry]);
+        
+        _searchScorer.Score(fileEntry, Arg.Any<string>()).Returns(new FileSearchMatch(1000, FileSearchMatchType.ExactName));
+        _searchScorer.Score(directoryEntry, Arg.Any<string>()).Returns(new FileSearchMatch(1000, FileSearchMatchType.ExactName));
+
+        var result = _sut.SearchAsync("query", searchItemType: searchItemType);
+
+        // asert that all results have the expected IsDirectory value
+        Assert.All(result, item => Assert.Equal(expectedIsDirectory, item.IsDirectory));
+    }
+
     [Fact]
     public void SearchAsync_MapsAllResultFields()
     {

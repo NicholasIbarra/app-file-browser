@@ -1,5 +1,5 @@
 import { httpClient } from './../http-client.ts'
-import type { paths } from './../generated/schema.ts'
+import type { paths, components } from './../generated/schema.ts'
 
 type SearchOperation = paths['/api/search']['get']
 type SearchQuery = NonNullable<SearchOperation['parameters']['query']>
@@ -24,11 +24,19 @@ export async function searchFilesSemantic(
 export async function searchFiles(
   query: NonNullable<SearchQuery['query']>,
   limit?: SearchQuery['limit'],
+  searchItemType?: components["schemas"]["SearchItemType"],
   signal?: AbortSignal,
 ): Promise<SearchResult[]> {
+  const paramLimit = limit === undefined ? 50 : limit;
+  const type = !searchItemType ? null : searchItemType;
+
   const response = await httpClient.get<SearchResult[]>('/api/search', {
-    params: limit === undefined ? { query } : { query, limit },
-    signal,
+    params: { 
+      query, 
+      limit: paramLimit, 
+      searchItemType: type 
+    },
+    signal
   })
 
   return response.data

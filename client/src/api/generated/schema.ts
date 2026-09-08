@@ -43,39 +43,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/directories/re-index": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/files/download": {
         parameters: {
             query?: never;
@@ -320,6 +287,7 @@ export interface paths {
                 query?: {
                     query?: string;
                     limit?: number;
+                    searchItemType?: components["schemas"]["SearchItemType"];
                 };
                 header?: never;
                 path?: never;
@@ -403,7 +371,9 @@ export interface components {
             path: string | null;
             isDirectory?: boolean;
             extension?: string | null;
+            /** Format: int64 */
             size?: number | null;
+            /** Format: date-time */
             lastModified?: string;
             matchReason?: string | null;
         };
@@ -420,6 +390,8 @@ export interface components {
         };
         /** @enum {string} */
         FileSystemEntryType: "File" | "Directory";
+        /** @enum {string} */
+        SearchItemType: "File" | "Directory";
         SemanticFileSearchResponseDto: {
             message?: string | null;
             results?: components["schemas"]["FileSearchResultDto"][] | null;

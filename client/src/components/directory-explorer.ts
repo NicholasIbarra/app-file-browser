@@ -45,7 +45,11 @@ export class DirectoryExplorer {
    
     try {
       const contents = await getDirectory(path)
-      if (version !== this.loadVersion) return
+      
+      if (version !== this.loadVersion) {
+        return
+      }
+
       this.currentPath = contents.path || '/'
       
       this.render(contents, path !== undefined)

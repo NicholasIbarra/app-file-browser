@@ -30,11 +30,13 @@ public class SearchController : ControllerBase
     public ActionResult<IReadOnlyList<FileSearchResultDto>> Search(
         [FromQuery] string query,
         [FromQuery] int limit = 50,
+        [FromQuery] SearchItemType? searchItemType = null,
         CancellationToken cancellationToken = default)
     {
         var results = _fileSearchService.SearchAsync(
             query,
             limit,
+            searchItemType,
             cancellationToken);
 
         return Ok(results);

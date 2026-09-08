@@ -5,6 +5,7 @@ export interface AppShell {
   uploadInput: HTMLInputElement
   searchButton: HTMLButtonElement
   searchInput: HTMLInputElement
+  searchFilter: HTMLInputElement
   searchOverlay: HTMLDivElement
   searchResults: HTMLUListElement
   searchStatus: HTMLParagraphElement
@@ -51,6 +52,14 @@ export function renderAppShell(root: HTMLDivElement): AppShell {
           <input id="search-input" type="search" aria-label="Search files and folders" placeholder="Search files and folders" autocomplete="off" spellcheck="false" />
           <kbd>Esc</kbd>
         </div>
+        <div class="search-filters">
+          <span>Filters: </span>
+          <select id="search-filter-type">
+            <option value="0">Files and Folders</option>
+            <option value="1">Files Only</option>
+            <option value="2">Folders Only</option>
+          </select>
+        </div>
         <p id="search-status" class="search-hint" role="status">Start typing to search your files.</p>
         <ul id="search-results" aria-label="Search results" hidden></ul>
         </div>
@@ -81,6 +90,7 @@ export function renderAppShell(root: HTMLDivElement): AppShell {
     uploadButton: getElement(root, '#upload-button'), 
     uploadInput: getElement(root, '#upload-input'),
     searchInput: getElement(root, '#search-input'),
+    searchFilter: getElement(root, '#search-filter-type'),
     searchOverlay: getElement(root, '#search-overlay'),
     searchResults: getElement(root, '#search-results'), 
     searchStatus: getElement(root, '#search-status'),

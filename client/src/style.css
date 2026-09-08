@@ -506,3 +506,57 @@ kbd {
 #status {
   color: var(--muted);
 }
+
+
+.search-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 12px 24px;
+
+  border-top: 1px solid #343a40;
+  border-bottom: 1px solid #343a40;
+
+  background: #202328;
+
+  color: #aeb4bd;
+  font-size: 14px;
+}
+
+.search-filters > span {
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+#search-filter-type {
+  min-width: 180px;
+
+  padding: 8px 32px 8px 12px;
+
+  border: 1px solid #3d444d;
+  border-radius: 8px;
+
+  background-color: #252930;
+  color: #e7e9ed;
+
+  font: inherit;
+  font-size: 14px;
+
+  cursor: pointer;
+  outline: none;
+
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
+}
+
+#search-filter-type:hover {
+  background-color: #2a2f36;
+  border-color: #505863;
+}
+
+#search-filter-type:focus {
+  border-color: #6ea8fe;
+  box-shadow: 0 0 0 2px rgb(110 168 254 / 15%);
+}

@@ -1,10 +1,12 @@
-using FileBrowser.Application.Abtractstions.Indexing;
-
 using FileBrowser.Application.Abtractstions.AI;
-using Microsoft.Extensions.AI;
+using FileBrowser.Application.Abtractstions.Indexing;
 using FileBrowser.Application.Search.Prompts;
 using FileBrowser.Application.Search.Scorer;
 using FileBrowser.Application.Search.Semantic;
+using FileBrowser.Application.Search.Specifications;
+using Microsoft.Extensions.AI;
+using System.ComponentModel;
+using System.Linq.Expressions;
 
 namespace FileBrowser.Application.Search;
 
@@ -147,7 +149,11 @@ public class FileSearchService : IFileSearchService
     internal static bool IsUsableEmbedding(float[]? embedding) =>
         embedding is { Length: > 0 } && embedding.All(float.IsFinite) && embedding.Any(value => value != 0);
 
-    public IReadOnlyList<FileSearchResultDto> SearchAsync(string query, int limit = 50, CancellationToken cancellationToken = default)
+    public IReadOnlyList<FileSearchResultDto> SearchAsync(
+        string query, 
+        int limit = 50, 
+        SearchItemType? searchItemType = null,
+        CancellationToken cancellationToken = default)
     {
         if (limit <= 0)
         {
@@ -163,8 +169,10 @@ public class FileSearchService : IFileSearchService
 
         var normalizedQuery = query.Trim();
 
+        var filterSpecification = new FileItemFilterSpecification(searchItemType);
+
         var results = _searchIndex
-            .Snapshot
+            .Snapshot.Where(filterSpecification.Criteria.Compile())
             .Select(entry =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
