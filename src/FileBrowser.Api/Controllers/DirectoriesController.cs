@@ -18,10 +18,12 @@ public class DirectoriesController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<DirectoryContentsDto>> GetAsync(
         [FromQuery] string? path,
+        [FromQuery] string? sort,
         CancellationToken cancellationToken)
     {
         var result = await _directoryBrowserService.GetDirectoryContentsAsync(
             path,
+            sort,
             cancellationToken);
 
         return Ok(result);

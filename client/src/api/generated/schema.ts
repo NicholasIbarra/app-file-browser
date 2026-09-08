@@ -15,6 +15,7 @@ export interface paths {
             parameters: {
                 query?: {
                     path?: string;
+                    sort?: string;
                 };
                 header?: never;
                 path?: never;

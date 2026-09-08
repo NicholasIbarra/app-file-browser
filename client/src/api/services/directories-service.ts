@@ -5,14 +5,16 @@ type GetDirectoryOperation = paths['/api/directories']['get']
 type GetDirectoryQuery = NonNullable<
   GetDirectoryOperation['parameters']['query']
 >
+
 type DirectoryContents =
   GetDirectoryOperation['responses'][200]['content']['application/json']
 
 export async function getDirectory(
   path?: GetDirectoryQuery['path'],
+  sort?: GetDirectoryQuery['sort']
 ): Promise<DirectoryContents> {
   const response = await httpClient.get<DirectoryContents>('/api/directories', {
-    params: path === undefined ? undefined : { path },
+    params: { path, sort },
   })
 
   return response.data

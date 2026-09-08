@@ -9,14 +9,26 @@ export function getUrlPath(): string | undefined {
   return new URL(window.location.href).searchParams.get('path') ?? undefined
 }
 
+export function getUrlSort(): string | undefined {
+  return new URL(window.location.href).searchParams.get('sort') ?? undefined
+}
+
+export function getSort() : string | undefined { 
+  return new URL(window.location.href).searchParams.get('sort') ?? undefined
+  
+}
+
 export function updateUrl(
   path: string | undefined,
   mode: Exclude<NavigationMode, 'none'>,
+  sort?: string,
 ) {
   const url = new URL(window.location.href)
 
   if (path) url.searchParams.set('path', path)
   else url.searchParams.delete('path')
+
+  if (sort !== undefined) url.searchParams.set('sort', sort)
 
   window.history[mode === 'push' ? 'pushState' : 'replaceState']({}, '', url)
 }

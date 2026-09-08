@@ -11,6 +11,7 @@ export interface AppShell {
   searchStatus: HTMLParagraphElement
   status: HTMLParagraphElement
   themeToggle: HTMLButtonElement
+  sortType: HTMLSelectElement
 }
 
 function getElement<T extends Element>(root: ParentNode, selector: string): T {
@@ -29,6 +30,19 @@ export function renderAppShell(root: HTMLDivElement): AppShell {
           <button id="upload-button" type="button">Upload</button>
           <input id="upload-input" class="visually-hidden" type="file" multiple />
           <button id="search-button" type="button" aria-haspopup="dialog"><span>Search</span><kbd aria-hidden="true">⌘ K</kbd></button>
+          
+          <div class="header-sort">
+          <span> Sort by</span>
+          <select id="sort-type">
+            <option value="name asc">Name (A–Z)</option>
+            <option value="name desc">Name (Z–A)</option>
+            <option value="size asc">Size (Smallest)</option>
+            <option value="size desc">Size (Largest)</option>
+            <option value="lastmodified desc">Last Modified (Newest)</option>
+            <option value="lastmodified asc">Last Modified (Oldest)</option>
+          </select>
+          
+          </div>
           <button id="theme-toggle" type="button"></button>
         </div>
       </header>
@@ -96,5 +110,6 @@ export function renderAppShell(root: HTMLDivElement): AppShell {
     searchStatus: getElement(root, '#search-status'),
     status: getElement(root, '#status'), 
     themeToggle: getElement(root, '#theme-toggle'),
+    sortType: getElement(root, '#sort-type'),
   }
 }

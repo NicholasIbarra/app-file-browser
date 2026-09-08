@@ -9,7 +9,7 @@ import {
 } from '../api'
 import { formatFileSize } from '../utils/file-size'
 import { notyf } from '../utils/notifications'
-import { getParentPath, getPathBreadcrumbs, updateUrl, type NavigationMode } from '../utils/navigation'
+import { getParentPath, getPathBreadcrumbs, getUrlPath, getUrlSort, updateUrl, type NavigationMode } from '../utils/navigation'
 import type { AppShell } from './app-shell'
 import { renameEntry } from '../api/services/files-service'
 
@@ -31,21 +31,31 @@ export class DirectoryExplorer {
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') this.closeActionMenus(true)
     })
+
+    elements.sortType.addEventListener('change', () => {
+      const path = getUrlPath()
+      updateUrl(path, 'push', elements.sortType.value)
+      void this.loadDirectoryItems(path)
+    })
   }
 
   async loadDirectoryItems(path?: string, urlMode: NavigationMode = 'none') {
     this.requestedPath = path
     const version = ++this.loadVersion
     if (urlMode !== 'none') updateUrl(path, urlMode)
-    const { entries, status } = this.elements
+    const { entries, status, sortType } = this.elements
+    const sort = getUrlSort()
+    sortType.value = [...sortType.options].some((option) => option.value === sort)
+      ? sort!
+      : 'name asc'
     
     // Set loading state
     status.hidden = false
     status.textContent = 'Loading…'
     entries.hidden = true
-   
+
     try {
-      const contents = await getDirectory(path)
+      const contents = await getDirectory(path, sortType.value)
       
       if (version !== this.loadVersion) {
         return
